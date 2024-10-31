@@ -1,0 +1,34 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BloodCenter", "BloodCenter\BloodCenter.csproj", "{72087A48-DCB8-4AC6-A501-43B2F4810B51}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BloodCenter.Data", "BloodCenter.Data\BloodCenter.Data.csproj", "{26D04B5F-3B74-45F6-8428-D444E36AA792}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BloodCenter.Service", "BloodCenter.Service\BloodCenter.Service.csproj", "{09F0640C-8F75-4F8A-9751-C17585B2E0EB}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{72087A48-DCB8-4AC6-A501-43B2F4810B51}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{72087A48-DCB8-4AC6-A501-43B2F4810B51}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{72087A48-DCB8-4AC6-A501-43B2F4810B51}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{72087A48-DCB8-4AC6-A501-43B2F4810B51}.Release|Any CPU.Build.0 = Release|Any CPU
+		{26D04B5F-3B74-45F6-8428-D444E36AA792}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{26D04B5F-3B74-45F6-8428-D444E36AA792}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{26D04B5F-3B74-45F6-8428-D444E36AA792}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{26D04B5F-3B74-45F6-8428-D444E36AA792}.Release|Any CPU.Build.0 = Release|Any CPU
+		{09F0640C-8F75-4F8A-9751-C17585B2E0EB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{09F0640C-8F75-4F8A-9751-C17585B2E0EB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{09F0640C-8F75-4F8A-9751-C17585B2E0EB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{09F0640C-8F75-4F8A-9751-C17585B2E0EB}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
