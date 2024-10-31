@@ -12,6 +12,8 @@ namespace BloodCenter.Service.Cores.Interface
     {
         public Task<ModelResult> Register(RegisterDto registerDto);
         public Task<ModelResult> Login(LoginDto loginDto);
+        public Task<ModelResult> EmailConfirm(string hashedEmail);
+        public Task<ModelResult> Refresh(RefreshDto refreshDto);
         public Task<ModelResult> GetUser();
     }
 }

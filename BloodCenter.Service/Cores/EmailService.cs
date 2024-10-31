@@ -22,7 +22,7 @@ namespace BloodCenter.Service.Cores
             _config = config;
             _result = new ModelResult();
         }
-        public async Task<ModelResult> SendMailActiveAccount(string email)
+        public async Task<ModelResult> SendMailActiveAccount(string email, string hashEmail)
         {
             try
             {
@@ -30,7 +30,10 @@ namespace BloodCenter.Service.Cores
                 mail.From.Add(MailboxAddress.Parse(_config["EmailConfig:Email"]));
                 mail.To.Add(MailboxAddress.Parse(email));
                 mail.Subject = "Click link to active account";
-                mail.Body = new TextPart(TextFormat.Html) { Text = $"Please click the link to activate your account: <a href=>Activate Account</a>" };
+                mail.Body = new TextPart(TextFormat.Html)
+                {
+                    Text = $"Please click the link to activate your account: <a href='{_config["Jwt:Issuer"]}/api/verify/{hashEmail}'>Activate Account</a>"
+                };
                 using var smtp = new SmtpClient();
                 smtp.Connect(_config["EmailConfig:smtp"], int.Parse(_config["EmailConfig:SmtpPort"]), SecureSocketOptions.StartTls);
                 smtp.Authenticate(_config["EmailConfig:Email"], _config["EmailConfig:EmailPassword"]);

@@ -13,7 +13,7 @@ namespace BloodCenter.Data.Entities
     {
         [Required]
         public string FullName { get; set; }
-
+        public string? hashedEmail { get; set; }
         public string? refreshToken { get; set; }
         public DateTime? createAt { get; set; }
         public DateTime? expiresAt { get; set; }

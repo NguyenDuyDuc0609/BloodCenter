@@ -23,4 +23,8 @@
     <ProjectReference Include="..\BloodCenter.Data\BloodCenter.Data.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Utils\Middleware\" />
+  </ItemGroup>
+
 </Project>

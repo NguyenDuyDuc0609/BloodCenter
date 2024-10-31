@@ -6,14 +6,20 @@ using BloodCenter.Data.Entities;
 using BloodCenter.Service.Cores.Interface;
 using BloodCenter.Service.Utils.Interface;
 using MailKit;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.IdentityModel.Tokens;
 using System;
 using System.Collections.Generic;
+using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Net.WebSockets;
 using System.Reflection.Metadata.Ecma335;
+using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -28,7 +34,8 @@ namespace BloodCenter.Service.Cores
         private readonly RoleManager<IdentityRole<Guid>> _roleManager;
         private IEmailService _emailService;
         private IJwt _jwt;
-        public Auth(BloodCenterContext bloodCenterContext, IMapper mapper, UserManager<Account> userManager, RoleManager<IdentityRole<Guid>> roleManager, IEmailService mailService, IJwt jwt)
+        private readonly IConfiguration _configuration;
+        public Auth(BloodCenterContext bloodCenterContext, IMapper mapper, UserManager<Account> userManager, RoleManager<IdentityRole<Guid>> roleManager, IEmailService mailService, IJwt jwt, IConfiguration configuration)
         {
             _result = new ModelResult();
             _bloodCenterContext = bloodCenterContext;
@@ -37,8 +44,37 @@ namespace BloodCenter.Service.Cores
             _roleManager = roleManager;
             _emailService = mailService;
             _jwt = jwt;
+            _configuration = configuration;
         }
 
+
+        private static string HashEmail(string email) {
+            using (var sha256 = SHA256.Create())
+            {
+                var bytes = Encoding.UTF8.GetBytes(email);
+                var hashEmail = sha256.ComputeHash(bytes);
+                var builder = new StringBuilder();
+                foreach (var item in hashEmail)
+                {
+                    builder.Append(item.ToString("x2"));
+                }
+                return builder.ToString();
+            }
+        }
+        private ClaimsPrincipal? GetClaimsPrincipalToken(string? token)
+        {
+            var validation = new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidateAudience = true,
+                ValidateLifetime = false,
+                ValidateIssuerSigningKey = true,
+                ValidIssuer = _configuration["Jwt:Issuer"],
+                ValidAudience = _configuration["Jwt:Audience"],
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]))
+            };
+            return new JwtSecurityTokenHandler().ValidateToken(token, validation, out _);
+        } 
         public async Task<ModelResult> Login(LoginDto loginDto)
         {
             using (var transaction = await _bloodCenterContext.Database.BeginTransactionAsync())
@@ -129,8 +165,9 @@ namespace BloodCenter.Service.Cores
                         _result.Message = "The email or Username has already been used by another user";
                         return _result;
                     }
-
+                    var hashEmail = HashEmail(registerDto.Email);
                     var newUser = _mapper.Map<Account>(registerDto);
+                    newUser.hashedEmail = hashEmail;
                     var result = await _userManager.CreateAsync(newUser, registerDto.Password);
                     if (!result.Succeeded)
                     {
@@ -144,15 +181,15 @@ namespace BloodCenter.Service.Cores
                         await _roleManager.CreateAsync(new IdentityRole<Guid>(registerDto.Role.ToString()));
                     }
                     await _userManager.AddToRoleAsync(newUser, registerDto.Role.ToString());
-                    await _bloodCenterContext.SaveChangesAsync();
-
-                    var sendMail = await _emailService.SendMailActiveAccount(registerDto.Email);
+                    var sendMail = await _emailService.SendMailActiveAccount(registerDto.Email, hashEmail);
                     if (!sendMail.Success)
                     {
+                        await transaction.RollbackAsync();
                         _result.Success = false;
                         _result.Message = sendMail.Message;
                         return _result;
                     }
+                    await _bloodCenterContext.SaveChangesAsync();
                     await transaction.CommitAsync();
                     _result.Success = true;
                     _result.Message = "Registration successful";
@@ -175,6 +212,47 @@ namespace BloodCenter.Service.Cores
             _result.Message = "success";
             _result.Data = role;
             return _result;
+        }
+
+        public async Task<ModelResult> EmailConfirm(string hashedEmail)
+        {
+            using (var transaction = await _bloodCenterContext.Database.BeginTransactionAsync())
+            {
+                try
+                {
+                    if (hashedEmail == null)
+                    {
+                        _result.Success = false;
+                        _result.Message = "Missing parameter";
+                        return _result;
+                    }
+                    var user = await _bloodCenterContext.Users.Where(u => u.hashedEmail == hashedEmail).FirstOrDefaultAsync();
+                    if (user == null)
+                    {
+                        _result.Success = false;
+                        _result.Message = "Email not valid";
+                        return _result;
+                    }
+                    user.EmailConfirmed = true;
+                    await _bloodCenterContext.SaveChangesAsync();
+                    await transaction.CommitAsync();
+                    _result.Success = true;
+                    _result.Message = "Verify success";
+                    return _result;
+                }
+                catch (Exception ex) {
+                    await transaction.RollbackAsync();
+                    _result.Success = false;
+                    _result.Message = ex.Message;
+                    return _result;
+                }
+            }
+        }
+        
+        public async Task<ModelResult> Refresh(RefreshDto refreshDto)
+        {
+
+            throw new NotImplementedException();
         }
     }
 }

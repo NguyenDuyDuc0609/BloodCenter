@@ -31,5 +31,19 @@ namespace BloodCenter.Controllers
             _result = await _auth.Login(loginDto);
             return Ok(_result);
         }
+        [HttpGet("verify/{hashedEmail}")]
+        [AllowAnonymous]
+        public async Task<IActionResult> Verify(string hashedEmail)
+        {
+            _result = await _auth.EmailConfirm(hashedEmail);
+            return Ok(_result);
+        }
+        [HttpPost("refresh")]
+        [AllowAnonymous]
+        public async Task<IActionResult> RefreshAccessToken([FromBody] RefreshDto refreshDto)
+        {
+
+            return Ok(_result);
+        }
     }
 }

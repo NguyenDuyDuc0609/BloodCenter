@@ -9,7 +9,8 @@ namespace BloodCenter.Data.Abstractions.IEntities
     public interface IAccount
     {
         public string FullName { get; set; }
-        public string refreshToken { get; set; }
+        public string? refreshToken { get; set; }
+        public string? hashedEmail { get; set; }
         public DateTime? createAt { get; set; }
         public DateTime? expiresAt { get; set; }
     }
