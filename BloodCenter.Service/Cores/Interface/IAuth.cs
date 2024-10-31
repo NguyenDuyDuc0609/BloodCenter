@@ -1,0 +1,17 @@
+﻿using BloodCenter.Data.Dtos;
+using BloodCenter.Data.Dtos.AuthDto;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace BloodCenter.Service.Cores.Interface
+{
+    public interface IAuth
+    {
+        public Task<ModelResult> Register(RegisterDto registerDto);
+        public Task<ModelResult> Login(LoginDto loginDto);
+        public Task<ModelResult> GetUser();
+    }
+}
