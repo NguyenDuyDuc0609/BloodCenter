@@ -22,7 +22,6 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
-
 namespace BloodCenter.Service.Cores
 {
     public class Auth : IAuth
@@ -251,8 +250,34 @@ namespace BloodCenter.Service.Cores
         
         public async Task<ModelResult> Refresh(RefreshDto refreshDto)
         {
+            var priciple = GetClaimsPrincipalToken(refreshDto.AccessToken);
+            //if (priciple?.Identity?.Name is null)
+            //{
+            //    _result.Message = "Khong lay duoc";
+            //    return _result;
+            //}
+            //else
+            //{
+            //    _result.Data = priciple?.Identity?.Name;
+            //    return _result;
+            //}
+            if (priciple?.Identity?.Name is null)
+            {
+                _result.Success = false;
+                return _result;
+            }
 
-            throw new NotImplementedException();
+            var user = await _userManager.FindByNameAsync(priciple.Identity.Name);
+            if (user == null || user.refreshToken != refreshDto.RefreshToken || user.expiresAt < DateTime.UtcNow)
+            {
+                _result.Success = false;
+                return _result;
+            }
+            var newAccessToken = await _jwt.GenerateJWT(user);
+            _result.Success = true;
+            _result.Data = newAccessToken;
+            _result.Message = "Create new token success";
+            return _result;
         }
     }
 }

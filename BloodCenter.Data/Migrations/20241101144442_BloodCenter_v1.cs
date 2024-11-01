@@ -30,6 +30,7 @@ namespace BloodCenter.Data.Migrations
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     FullName = table.Column<string>(type: "text", nullable: false),
+                    hashedEmail = table.Column<string>(type: "text", nullable: true),
                     refreshToken = table.Column<string>(type: "text", nullable: true),
                     createAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     expiresAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),

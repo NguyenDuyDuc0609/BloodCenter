@@ -42,7 +42,7 @@ namespace BloodCenter.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> RefreshAccessToken([FromBody] RefreshDto refreshDto)
         {
-
+            _result = await _auth.Refresh(refreshDto);
             return Ok(_result);
         }
     }

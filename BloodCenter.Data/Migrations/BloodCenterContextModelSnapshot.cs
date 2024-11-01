@@ -85,6 +85,9 @@ namespace BloodCenter.Data.Migrations
                     b.Property<DateTime?>("expiresAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("hashedEmail")
+                        .HasColumnType("text");
+
                     b.Property<string>("refreshToken")
                         .HasColumnType("text");
 

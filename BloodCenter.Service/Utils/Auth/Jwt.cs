@@ -33,7 +33,7 @@ namespace BloodCenter.Service.Utils.Auth
             {
                 new Claim(ClaimTypes.NameIdentifier, account.FullName),
                 new Claim(ClaimTypes.Email, account.Email),
-                new Claim(ClaimTypes.Surname, account.UserName),
+                new Claim(ClaimTypes.Name, account.UserName),
             };
             foreach (var role in roles)
             {

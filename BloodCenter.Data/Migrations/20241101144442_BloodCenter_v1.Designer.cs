@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace BloodCenter.Data.Migrations
 {
     [DbContext(typeof(BloodCenterContext))]
-    [Migration("20241031031241_BloodCenter_v1")]
+    [Migration("20241101144442_BloodCenter_v1")]
     partial class BloodCenter_v1
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -86,6 +86,9 @@ namespace BloodCenter.Data.Migrations
 
                     b.Property<DateTime?>("expiresAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("hashedEmail")
+                        .HasColumnType("text");
 
                     b.Property<string>("refreshToken")
                         .HasColumnType("text");
