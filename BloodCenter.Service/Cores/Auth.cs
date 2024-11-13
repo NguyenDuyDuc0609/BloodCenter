@@ -92,6 +92,12 @@ namespace BloodCenter.Service.Cores
                         _result.Message = "User does not exist";
                         return _result;
                     }
+                    if(user.EmailConfirmed != true)
+                    {
+                        _result.Success = false;
+                        _result.Message = "Active account in mail to login";
+                        return _result;
+                    }
                     var checkPassword = await _userManager.CheckPasswordAsync(user, loginDto.Password);
                     if (!checkPassword)
                     {
