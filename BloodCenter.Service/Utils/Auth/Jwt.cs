@@ -18,17 +18,14 @@ namespace BloodCenter.Service.Utils.Auth
     public class Jwt : IJwt
     {
         private readonly IConfiguration _config;
-        private readonly UserManager<Account> _userManager;
         public Jwt(IConfiguration config, UserManager<Account> userManager)
         {
             _config = config;
-            _userManager = userManager;
         }
-        public async Task<string> GenerateJWT(Account account)
+        public string GenerateJWT(Account account, List<string> roles)
         {
             var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"]));
             var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
-            var roles = await _userManager.GetRolesAsync(account);
             var claims = new List<Claim>
             {
                 new Claim(ClaimTypes.NameIdentifier, account.FullName),

@@ -9,7 +9,7 @@ namespace BloodCenter.Service.Utils.Interface
 {
     public interface IJwt
     {
-        Task<string> GenerateJWT(Account account);
+        string GenerateJWT(Account account, List<string> roles);
         string GenerateRefreshToken();
     }
 }

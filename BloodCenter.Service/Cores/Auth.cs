@@ -73,7 +73,7 @@ namespace BloodCenter.Service.Cores
                 IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]))
             };
             return new JwtSecurityTokenHandler().ValidateToken(token, validation, out _);
-        } 
+        }
         public async Task<ModelResult> Login(LoginDto loginDto)
         {
             using (var transaction = await _bloodCenterContext.Database.BeginTransactionAsync())
@@ -84,20 +84,18 @@ namespace BloodCenter.Service.Cores
                     {
                         _result.Success = false;
                         _result.Message = "Missing parameter";
+                        return _result;
                     }
-                    var user = await _userManager.FindByNameAsync(loginDto.UserName);
+
+                    var user = await _userManager.Users
+                                    .FirstOrDefaultAsync(u => u.UserName == loginDto.UserName);
                     if (user == null)
                     {
                         _result.Success = false;
                         _result.Message = "User does not exist";
                         return _result;
                     }
-                    if(user.EmailConfirmed != true)
-                    {
-                        _result.Success = false;
-                        _result.Message = "Active account in mail to login";
-                        return _result;
-                    }
+
                     var checkPassword = await _userManager.CheckPasswordAsync(user, loginDto.Password);
                     if (!checkPassword)
                     {
@@ -105,32 +103,29 @@ namespace BloodCenter.Service.Cores
                         _result.Message = "Incorrect password. Please try again";
                         return _result;
                     }
-                    var refreshToken = "";
-                    if (user.refreshToken != null && user.expiresAt > DateTime.UtcNow)
+
+                    if (user.EmailConfirmed != true)
                     {
-                        refreshToken = user.refreshToken;
+                        _result.Success = false;
+                        _result.Message = "Active account in mail to login";
+                        return _result;
                     }
-                    else
-                    {
-                        refreshToken = _jwt.GenerateRefreshToken();
-                        user.refreshToken = refreshToken;
-                        user.expiresAt = DateTime.UtcNow.AddDays(7);
-                    }
-                    var tokenTask = _jwt.GenerateJWT(user);
-                    var rolesTask = _userManager.GetRolesAsync(user);
-                    await Task.WhenAll(tokenTask, rolesTask);
-                    var token = await tokenTask;
-                    var roles = await rolesTask;
+                    var roles = await _userManager.GetRolesAsync(user);
+                    user.refreshToken = (user.refreshToken != null && user.expiresAt > DateTime.UtcNow) ? user.refreshToken : _jwt.GenerateRefreshToken();
+
+                    var token = _jwt.GenerateJWT(user, roles.ToList());
+
                     List<string> roleList = roles.ToList();
                     await _bloodCenterContext.SaveChangesAsync();
                     var loginResponse = new LoginResponseDto
                     {
                         Token = token,
-                        refreshToken = refreshToken,
+                        refreshToken = user.refreshToken,
                         UserName = user.UserName,
                         FullName = user.FullName,
                         Role = roleList
                     };
+
                     _result.Success = true;
                     _result.Data = loginResponse;
                     _result.Message = "Login success";
@@ -146,7 +141,6 @@ namespace BloodCenter.Service.Cores
                 }
             }
         }
-
         public async Task<ModelResult> Register(RegisterDto registerDto)
         {
             using (var transaction = await _bloodCenterContext.Database.BeginTransactionAsync())
@@ -269,6 +263,7 @@ namespace BloodCenter.Service.Cores
             //}
             if (priciple?.Identity?.Name is null)
             {
+                _result.Message = "Mising access token to get pricipale";
                 _result.Success = false;
                 return _result;
             }
@@ -276,10 +271,12 @@ namespace BloodCenter.Service.Cores
             var user = await _userManager.FindByNameAsync(priciple.Identity.Name);
             if (user == null || user.refreshToken != refreshDto.RefreshToken || user.expiresAt < DateTime.UtcNow)
             {
+                _result.Message = priciple.Identity.Name;
                 _result.Success = false;
                 return _result;
             }
-            var newAccessToken = await _jwt.GenerateJWT(user);
+            var roles = await _userManager.GetRolesAsync(user);
+            var newAccessToken = _jwt.GenerateJWT(user, roles.ToList());
             _result.Success = true;
             _result.Data = newAccessToken;
             _result.Message = "Create new token success";

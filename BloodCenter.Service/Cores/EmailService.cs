@@ -29,10 +29,11 @@ namespace BloodCenter.Service.Cores
                 var mail = new MimeMessage();
                 mail.From.Add(MailboxAddress.Parse(_config["EmailConfig:Email"]));
                 mail.To.Add(MailboxAddress.Parse(email));
-                mail.Subject = "Click link to active account";
+                mail.Subject = "Click link to activate account";
+                var activationLink = $"https://localhost:7254/api/Auth/verify/{hashEmail}";
                 mail.Body = new TextPart(TextFormat.Html)
                 {
-                    Text = $"Please click the link to activate your account: <a href='{_config["Jwt:Issuer"]}/api/verify/{hashEmail}'>Activate Account</a>"
+                    Text = $"Please click the link to activate your account: <a href='{activationLink}'>Activate Account</a>"
                 };
                 using var smtp = new SmtpClient();
                 smtp.Connect(_config["EmailConfig:smtp"], int.Parse(_config["EmailConfig:SmtpPort"]), SecureSocketOptions.StartTls);
