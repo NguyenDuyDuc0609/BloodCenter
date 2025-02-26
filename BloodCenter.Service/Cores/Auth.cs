@@ -251,16 +251,6 @@ namespace BloodCenter.Service.Cores
         public async Task<ModelResult> Refresh(RefreshDto refreshDto)
         {
             var priciple = GetClaimsPrincipalToken(refreshDto.AccessToken);
-            //if (priciple?.Identity?.Name is null)
-            //{
-            //    _result.Message = "Khong lay duoc";
-            //    return _result;
-            //}
-            //else
-            //{
-            //    _result.Data = priciple?.Identity?.Name;
-            //    return _result;
-            //}
             if (priciple?.Identity?.Name is null)
             {
                 _result.Message = "Mising access token to get pricipale";
