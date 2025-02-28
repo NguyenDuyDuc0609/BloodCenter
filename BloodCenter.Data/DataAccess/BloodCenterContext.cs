@@ -8,6 +8,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Reflection.Emit;
+using BloodCenter.Data.Abstractions.Interface;
+using BloodCenter.Data.Abstractions;
 
 namespace BloodCenter.Data.DataAccess
 {
@@ -75,5 +77,51 @@ namespace BloodCenter.Data.DataAccess
                 .HasIndex(a => a.DateActivity)
                 .HasDatabaseName("IX_Activity_DateActivity");
         }
+        public override int SaveChanges()
+        {
+            UpdateIsDelete();
+            UpdateTimestamps();
+            return base.SaveChanges();
+        }
+
+        public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+        {
+            UpdateIsDelete();
+            UpdateTimestamps();
+            return await base.SaveChangesAsync(cancellationToken);
+        }
+
+        // Xử lý xóa mềm (Soft Delete)
+        private void UpdateIsDelete()
+        {
+            var entities = ChangeTracker.Entries<ISoftDelete>().Where(x => x.State == EntityState.Deleted).ToList();
+
+            foreach (var entity in entities)
+            {
+                entity.State = EntityState.Modified;
+                entity.Entity.IsDelete = true;
+                entity.Entity.DeleteDate = DateTime.UtcNow;
+            }
+        }
+
+        // Cập nhật CreatedDate và ModifiedDate
+        private void UpdateTimestamps()
+        {
+            var entities = ChangeTracker.Entries<EntityAuditBase<Guid>>().Where(x => x.State == EntityState.Added || x.State == EntityState.Modified).ToList();
+
+            foreach (var entity in entities)
+            {
+                if (entity.State == EntityState.Added && entity.Entity.GetType().GetProperty("CreatedDate") != null)
+                {
+                    entity.Entity.CreatedDate = DateTime.UtcNow;
+                }
+
+                if (entity.Entity.GetType().GetProperty("ModifiedDate") != null)
+                {
+                    entity.Entity.ModifiedDate = DateTime.UtcNow;
+                }
+            }
+        }
+
     }
 }

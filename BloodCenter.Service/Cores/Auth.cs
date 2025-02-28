@@ -149,60 +149,76 @@ namespace BloodCenter.Service.Cores
                 {
                     if (registerDto == null)
                     {
-                        _result.Success = false;
-                        _result.Message = "Missing parameter";
-                        return _result;
+                        return new ModelResult { Success = false, Message = "Missing parameter" };
                     }
-                    var checkEmailTask = _userManager.FindByEmailAsync(registerDto.Email);
-                    var chekcUsernameTask = _userManager.FindByNameAsync(registerDto.UserName);
-                    await Task.WhenAll(checkEmailTask, chekcUsernameTask);
-                    var checkEmailExist = checkEmailTask.Result;
-                    var chekcUsernameExist = chekcUsernameTask.Result;
-                    if (checkEmailExist != null && chekcUsernameExist != null)
+
+                    var existingUser = await _bloodCenterContext.Users
+                        .Where(u => u.Email == registerDto.Email || u.UserName == registerDto.UserName)
+                        .Select(u => new { u.Email, u.UserName })
+                        .FirstOrDefaultAsync();
+
+                    if (existingUser != null)
                     {
-                        _result.Success = false;
-                        _result.Message = "The email or Username has already been used by another user";
-                        return _result;
+                        return new ModelResult
+                        {
+                            Success = false,
+                            Message = "The email or username has already been used by another user"
+                        };
                     }
+
                     var hashEmail = HashEmail(registerDto.Email);
+
                     var newUser = _mapper.Map<Account>(registerDto);
+                    newUser.Note = "Donor";
                     newUser.hashedEmail = hashEmail;
-                    var result = await _userManager.CreateAsync(newUser, registerDto.Password);
-                    if (!result.Succeeded)
+
+                    var createUserResult = await _userManager.CreateAsync(newUser, registerDto.Password);
+                    if (!createUserResult.Succeeded)
                     {
-                        _result.Success = false;
-                        _result.Message = "Create user failed";
-                        return _result;
+                        return new ModelResult { Success = false, Message = "Create user failed" };
                     }
-                    var roleExist = await _roleManager.RoleExistsAsync(registerDto.Role.ToString());
+
+                    bool roleExist = await _roleManager.Roles.AnyAsync(r => r.Name == registerDto.Role.ToString());
                     if (!roleExist)
                     {
                         await _roleManager.CreateAsync(new IdentityRole<Guid>(registerDto.Role.ToString()));
                     }
                     await _userManager.AddToRoleAsync(newUser, registerDto.Role.ToString());
+
+                    if (registerDto.Role == Data.Enums.Role.Donor)
+                    {
+                        bool donorExists = await _bloodCenterContext.Donors.AnyAsync(d => d.Id == newUser.Id);
+                        if (!donorExists)
+                        {
+                            var newDonor = new Donor
+                            {
+                                Id = newUser.Id,
+                                Account = newUser
+                            };
+                            _bloodCenterContext.Donors.Add(newDonor);
+                        }
+                    }
+
                     var sendMail = await _emailService.SendMailActiveAccount(registerDto.Email, hashEmail);
                     if (!sendMail.Success)
                     {
                         await transaction.RollbackAsync();
-                        _result.Success = false;
-                        _result.Message = sendMail.Message;
-                        return _result;
+                        return new ModelResult { Success = false, Message = sendMail.Message };
                     }
+
                     await _bloodCenterContext.SaveChangesAsync();
                     await transaction.CommitAsync();
-                    _result.Success = true;
-                    _result.Message = "Registration successful";
-                    return _result;
+
+                    return new ModelResult { Success = true, Message = "Registration successful" };
                 }
                 catch (Exception ex)
                 {
                     await transaction.RollbackAsync();
-                    _result.Success = false;
-                    _result.Message = ex.Message;
-                    return _result;
+                    return new ModelResult { Success = false, Message = ex.Message };
                 }
             }
         }
+
         public async Task<ModelResult> GetUser()
         {
             var user = await _userManager.FindByEmailAsync("nguyenduyduc0609genshin@gmail.com");
