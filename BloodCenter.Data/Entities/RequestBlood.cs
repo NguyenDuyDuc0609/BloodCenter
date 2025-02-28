@@ -8,22 +8,20 @@ using System.Threading.Tasks;
 
 namespace BloodCenter.Data.Entities
 {
-    public class Activity : EntityAuditBase<Guid>
+    public class RequestBlood : EntityAuditBase<Guid>
     {
         public Guid HospitalId { get; set; }
 
         public Hospital? Hospital { get; set; }
 
-        public DateTime DateActivity { get; set; }
+        public Guid? HospitalAccept { get; set; }
 
-        public string OperatingHour { get; set; }
+        public string BloodType { get; set; }
 
         public int Quantity { get; set; }
 
-        public int NumberIsRegistration { get; set; } = 0;
+        public StatusRequestBlood Status { get; set; }
 
-        public ICollection<SessionDonor>? SessionDonors { get; set; } = new List<SessionDonor>();
-
-        public StatusActivity Status { get; set; }
+        public string? Address { get; set; }
     }
 }
