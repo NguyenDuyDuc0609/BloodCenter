@@ -20,4 +20,8 @@
     <PackageReference Include="NuGet" Version="1.0.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Dtos\AdminDto\" />
+  </ItemGroup>
+
 </Project>

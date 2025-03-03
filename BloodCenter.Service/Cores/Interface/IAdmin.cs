@@ -1,4 +1,5 @@
 ﻿using BloodCenter.Data.Dtos;
+using BloodCenter.Data.Dtos.AuthDto;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,8 +11,8 @@ namespace BloodCenter.Service.Cores.Interface
     public interface IAdmin
     {
         public Task<ModelResult> GetUser();
-        public Task<ModelResult> GetActivity();
-        public Task<ModelResult> AddNewHospital();
-        public Task<ModelResult> DeleteHospital();
+        public Task<ModelResult> GetActivity(int pageNumber, int pageSize, string openTime, int status, bool isDelete, string date);
+        public Task<ModelResult> AddNewHospital(RegisterDto registerDto);
+        public Task<ModelResult> DeleteHospital(string hospitalId);
     }
 }
