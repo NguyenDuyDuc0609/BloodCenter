@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace BloodCenter.Service.Cores.Interface
 {
-    internal class IDonor
+    public interface IDonor
     {
     }
 }
