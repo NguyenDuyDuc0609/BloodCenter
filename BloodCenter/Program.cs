@@ -11,6 +11,11 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Microsoft.OpenApi.Models;
+using BloodCenter.Service.Utils.Backgrounds.Interface;
+using BloodCenter.Service.Utils.Backgrounds;
+using Quartz.Simpl;
+using Quartz.Spi;
+using Quartz;
 
 var builder = WebApplication.CreateBuilder(args);
 var jwtSettings = builder.Configuration.GetSection("Jwt");
@@ -73,11 +78,26 @@ builder.Services.AddIdentity<Account, IdentityRole<Guid>>(options =>
 })
     .AddEntityFrameworkStores<BloodCenterContext>()
     .AddDefaultTokenProviders();
+builder.Services.AddQuartz(q =>
+{
+    var jobKey = new JobKey("UpdateActivity");
+
+    q.AddJob<QuartzJob>(opts => opts.WithIdentity(jobKey));
+
+    q.AddTrigger(opts => opts
+        .ForJob(jobKey)
+        .WithIdentity("UpdateActivityTrigger")
+        .WithCronSchedule("0 0 0 * * ?", x => x.InTimeZone(TimeZoneInfo.Local))
+    );
+});
+builder.Services.AddSingleton<IJobFactory, MicrosoftDependencyInjectionJobFactory>();
+builder.Services.AddQuartzHostedService(q => q.WaitForJobsToComplete = true);
 builder.Services.AddScoped<IAuth, Auth>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IJwt, Jwt>();
 builder.Services.AddScoped<IAdmin, AdminService>();
-
+builder.Services.AddScoped<IQuartzWorker, QuartzWorker>();
+builder.Services.AddTransient<QuartzJob>();
 var app = builder.Build();
 app.UseCors(builder => builder.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
 
