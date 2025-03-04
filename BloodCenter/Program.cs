@@ -97,6 +97,7 @@ builder.Services.AddScoped<IAuth, Auth>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IJwt, Jwt>();
 builder.Services.AddScoped<IAdmin, AdminService>();
+builder.Services.AddScoped<IHospital, HospitalService>();
 builder.Services.AddScoped<IQuartzWorker, QuartzWorker>();
 builder.Services.AddTransient<QuartzJob>();
 builder.Services.AddSingleton<QuartzStartProgram>();

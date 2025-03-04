@@ -52,5 +52,19 @@ namespace BloodCenter.Service.Utils.Auth
             generator.GetBytes(randomNumber);
             return Convert.ToBase64String(randomNumber);
         }
+        public static ClaimsPrincipal? GetClaimsPrincipalToken(string? token, IConfiguration _configuration)
+        {
+            var validation = new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidateAudience = true,
+                ValidateLifetime = false,
+                ValidateIssuerSigningKey = true,
+                ValidIssuer = _configuration["Jwt:Issuer"],
+                ValidAudience = _configuration["Jwt:Audience"],
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]))
+            };
+            return new JwtSecurityTokenHandler().ValidateToken(token, validation, out _);
+        }
     }
 }

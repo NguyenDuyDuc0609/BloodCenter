@@ -10,8 +10,6 @@ namespace BloodCenter.Data.Dtos.Hospital
 {
     public class ActivityDto
     {
-        public Guid HospitalId { get; set; }
-
         public DateTime DateActivity { get; set; }
 
         public string OperatingHour { get; set; }

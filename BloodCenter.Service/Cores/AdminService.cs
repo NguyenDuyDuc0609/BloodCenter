@@ -63,8 +63,8 @@ namespace BloodCenter.Service.Cores
                     {
                         return new ModelResult { Success = false, Message = "Missing parameter" };
                     }
-                    string sqlString = @"SELECT COUNT(*) FROM ""AspNetUsers"" WHERE ""FullName"" = {0}";
-                    var result = await _bloodCenterContext.Database.ExecuteSqlRawAsync(sqlString);
+                    string sqlString = @"SELECT COUNT(*) FROM ""AspNetUsers"" WHERE ""FullName"" = @p0";
+                    var result = await _bloodCenterContext.Database.ExecuteSqlRawAsync(sqlString, registerDto.UserName);
                     if (result > 0) {
                         return new ModelResult { Success = false, Message = "Hospital is already exits" };
                     }
@@ -72,7 +72,7 @@ namespace BloodCenter.Service.Cores
                     var newHospital = _mapper.Map<Account>(registerDto);
                     newHospital.Note = "Hospital";
                     newHospital.hashedEmail = hashEmail;
-                    var createHospital = await _userManager.CreateAsync(newHospital);
+                    var createHospital = await _userManager.CreateAsync(newHospital, registerDto.Password);
                     bool roleExist = await _roleManager.Roles.AnyAsync(r => r.Name == registerDto.Role.ToString());
                     if (!roleExist)
                     {
@@ -81,7 +81,7 @@ namespace BloodCenter.Service.Cores
                     await _userManager.AddToRoleAsync(newHospital, registerDto.Role.ToString());
                     if (registerDto.Role == Data.Enums.Role.Hospital)
                     {
-                        bool donorExists = await _bloodCenterContext.Donors.AnyAsync(d => d.Id == newHospital.Id);
+                        bool donorExists = await _bloodCenterContext.Hospitals.AnyAsync(d => d.Id == newHospital.Id);
                         if (!donorExists)
                         {
                             var newDonor = new Hospital

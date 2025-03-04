@@ -21,7 +21,7 @@ namespace BloodCenter.Controllers
             _result = new ModelResult();
         }
         [HttpPost]
-        //[Authorize(Roles ="Admin")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> AddNewHospital(RegisterDto registerDto)
         {
             _result = await _admin.AddNewHospital(registerDto);
