@@ -178,12 +178,12 @@ namespace BloodCenter.Service.Cores
                         return new ModelResult { Success = false, Message = "Create user failed" };
                     }
 
-                    bool roleExist = await _roleManager.Roles.AnyAsync(r => r.Name == registerDto.Role.ToString());
-                    if (!roleExist)
-                    {
-                        await _roleManager.CreateAsync(new IdentityRole<Guid>(registerDto.Role.ToString()));
-                    }
-                    await _userManager.AddToRoleAsync(newUser, registerDto.Role.ToString());
+                    //bool roleExist = await _roleManager.Roles.AnyAsync(r => r.Name == registerDto.Role.ToString());
+                    //if (!roleExist)
+                    //{
+                    //    await _roleManager.CreateAsync(new IdentityRole<Guid>(registerDto.Role.ToString()));
+                    //}
+                    //await _userManager.AddToRoleAsync(newUser, registerDto.Role.ToString());
 
                     if (registerDto.Role == Data.Enums.Role.Donor)
                     {

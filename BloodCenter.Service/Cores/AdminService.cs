@@ -11,6 +11,7 @@ using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.WebSockets;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
@@ -178,9 +179,17 @@ namespace BloodCenter.Service.Cores
         }
 
 
-        public async Task<ModelResult> GetUser()
+        public async Task<ModelResult> GetUser(string note, int pageNumber, int pageSize)
         {
-            throw new NotImplementedException();
+            try
+            {
+                if (pageNumber < 1 || pageSize < 1) return new ModelResult { Success = false, Message = "page number or page size is not valid" }; 
+                var listUser = await _userManager.Users.Where( a => a.Note == note ).OrderBy( a=> a.UserName).Skip((pageNumber-1)*pageSize).Take(pageSize).ToListAsync();
+                return new ModelResult { Success = true, Data=listUser, Message = "Get users success" };
+            }
+            catch (Exception ex) {
+                return new ModelResult { Success = false, Message= ex.Message };
+            }
         }
     }
 }

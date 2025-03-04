@@ -92,12 +92,14 @@ builder.Services.AddQuartz(q =>
 });
 builder.Services.AddSingleton<IJobFactory, MicrosoftDependencyInjectionJobFactory>();
 builder.Services.AddQuartzHostedService(q => q.WaitForJobsToComplete = true);
+builder.Services.AddSingleton(provider => provider.GetRequiredService<ISchedulerFactory>().GetScheduler().Result);
 builder.Services.AddScoped<IAuth, Auth>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IJwt, Jwt>();
 builder.Services.AddScoped<IAdmin, AdminService>();
 builder.Services.AddScoped<IQuartzWorker, QuartzWorker>();
 builder.Services.AddTransient<QuartzJob>();
+builder.Services.AddSingleton<QuartzStartProgram>();
 var app = builder.Build();
 app.UseCors(builder => builder.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
 
