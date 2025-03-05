@@ -16,7 +16,6 @@ using BloodCenter.Service.Utils.Backgrounds;
 using Quartz.Simpl;
 using Quartz.Spi;
 using Quartz;
-using BloodCenter.Service.Utils.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 var jwtSettings = builder.Configuration.GetSection("Jwt");
@@ -49,11 +48,6 @@ builder.Services.AddSwaggerGen(options =>
         }
     });
 });
-
-builder.Services.AddReverseProxy()
-    .LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"));
-builder.Services.AddHealthChecks();
-
 builder.Services.AddAutoMapper(typeof(MappingProfile));
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -119,8 +113,7 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
-app.MapReverseProxy();
-app.MapControllers();
-app.MapHealthChecks("health");
-app.Run();
 
+app.MapControllers();
+
+app.Run();
