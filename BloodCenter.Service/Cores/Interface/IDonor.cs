@@ -12,7 +12,7 @@ namespace BloodCenter.Service.Cores.Interface
     {
         public Task<ModelResult> GetActivityIsGoing(int pageNumber, int pageSize, int status);
         public Task<ModelResult> RegisterDonate(string token, string activity);
-        public Task<ModelResult> GetPersonalHistory(string token);
+        public Task<ModelResult> GetPersonalHistory(string token, int pageNumber, int pageSize);
         public Task<ModelResult> CancelRegistration(string token, string activity);
     }
 

@@ -70,15 +70,15 @@ namespace BloodCenter.Service.Cores
 
         }
         private ModelResult CheckActivityConditions(Activity activityIsGoing)
-{
-    if (activityIsGoing.Quantity == 0)
-        return new ModelResult { Success = false, Message = "Activity is not accepting registrations" };
+        { 
+            if (activityIsGoing.Quantity == 0)
+                return new ModelResult { Success = false, Message = "Activity is not accepting registrations" };
 
-    if (activityIsGoing.NumberIsRegistration >= activityIsGoing.Quantity)
-        return new ModelResult { Success = false, Message = "Activity is full" };
+            if (activityIsGoing.NumberIsRegistration >= activityIsGoing.Quantity)
+                return new ModelResult { Success = false, Message = "Activity is full" };
 
-    return new ModelResult { Success = true };
-}
+            return new ModelResult { Success = true };
+        }
 
         private async Task<ModelResult> CheckLastDonation(Guid donorId)
         {
@@ -93,7 +93,7 @@ namespace BloodCenter.Service.Cores
 
             return new ModelResult { Success = true, Data = lastDonation };
         }
-        private async Task AddOrUpdateSessionDonor(Guid donorId, Guid activityId)
+        private async Task AddOrUpdateSessionDonor(Guid donorId, Guid activityId, BloodCenterContext bloodCenterContext)
         {
             var sessionDonor = await _context.SessionDonors
                 .FromSqlRaw(@"SELECT * FROM ""SessionDonors"" WHERE ""ActivityId"" = {0} AND ""DonorId"" = {1}", activityId, donorId)
@@ -107,15 +107,16 @@ namespace BloodCenter.Service.Cores
                     ActivityId = activityId,
                     Status = Data.Enums.StatusSession.IsWaitingDonor
                 };
-                await _context.SessionDonors.AddAsync(sessionDonor);
+                await bloodCenterContext.SessionDonors.AddAsync(sessionDonor);
+                await bloodCenterContext.SaveChangesAsync();
             }
             else
             {
                 sessionDonor.Status = Data.Enums.StatusSession.IsWaitingDonor;
-                _context.SessionDonors.Update(sessionDonor);
+                bloodCenterContext.SessionDonors.Update(sessionDonor);
+                await bloodCenterContext.SaveChangesAsync();
             }
         }
-
 
         public async Task<ModelResult> CancelRegistration(string token, string activity)
         {
@@ -163,9 +164,29 @@ namespace BloodCenter.Service.Cores
             }
         }
 
-        public Task<ModelResult> GetPersonalHistory(string token)
+        public async Task<ModelResult> GetPersonalHistory(string token, int pageNumber, int pageSize)
         {
-            throw new NotImplementedException();
+            try
+            {
+                if (string.IsNullOrEmpty(token))
+                    return new ModelResult { Success = false, Message = "Please login" };
+                if (token.StartsWith("Bearer "))
+                    token = token.Substring("Bearer ".Length).Trim();
+
+                var principal = Jwt.GetClaimsPrincipalToken(token, _config);
+                if (principal?.Identity?.Name == null)
+                    return new ModelResult { Success = false, Message = "Invalid token" };
+                var donor = await _userManager.FindByNameAsync(principal.Identity.Name);
+                if (donor == null)
+                    return new ModelResult { Success = false, Message = "User does not exist" };
+                var list = await _context.Histories.FromSqlRaw(@"Select * from ""Histories"" where ""DonorId"" = {0} order by ""CreatedDate"" DESC offset {1} limit {2}", donor.Id, (pageNumber-1)*pageSize, pageSize)
+                    .ToListAsync();
+                return new ModelResult { Data = list, Success = true, Message = "Get hisroty success" };
+            }
+            catch (Exception ex) 
+            {
+                return new ModelResult { Success = false, Message = ex.ToString() };
+            }
         }
 
         public async Task<ModelResult> GetActivityIsGoing(int pageNumber, int pageSize, int status)
@@ -186,49 +207,52 @@ namespace BloodCenter.Service.Cores
 
         public async Task<ModelResult> RegisterDonate(string token, string activity)
         {
-            try
-            {
-                var validation = await ValidateAndGetActivity(token, activity);
-                if (!validation.Success)
-                    return validation;
-
-                if (validation.Data is not ActivityValidationResult result)
-                    return new ModelResult { Success = false, Message = "Data format is invalid" };
-
-                var donor = result.Donor;
-                var activityIsGoing = result.Activity;
-
-                var activityCheck = CheckActivityConditions(activityIsGoing);
-                if (!activityCheck.Success)
-                    return activityCheck;
-
-                var lastDonationCheck = await CheckLastDonation(donor.Id);
-                if (!lastDonationCheck.Success)
-                    return lastDonationCheck;
-
-                activityIsGoing.NumberIsRegistration += 1;
-                _context.Activities.Update(activityIsGoing);
-
-                var donation = new History
+            using (var transaction = await _context.Database.BeginTransactionAsync()) {
+                try
                 {
-                    DonorId = donor.Id,
-                    Quantity = activityIsGoing.Quantity,
-                    HospitalId = activityIsGoing.HospitalId,
-                    HospitalName = "HMMMMMM",
-                    ActivityId = activityIsGoing.Id,
-                    StatusHistories = Data.Enums.StatusHistories.Waiting
-                };
-                _context.Histories.Add(donation);
+                    var validation = await ValidateAndGetActivity(token, activity);
+                    if (!validation.Success)
+                        return validation;
 
-                await AddOrUpdateSessionDonor(donor.Id, activityIsGoing.Id);
+                    if (validation.Data is not ActivityValidationResult result)
+                        return new ModelResult { Success = false, Message = "Data format is invalid" };
 
-                await _context.SaveChangesAsync();
+                    var donor = result.Donor;
+                    var activityIsGoing = result.Activity;
 
-                return new ModelResult { Success = true, Data = lastDonationCheck.Data, Message = "Register success" };
-            }
-            catch (Exception ex)
-            {
-                return new ModelResult { Success = false, Message = "An error occurred. Please try again later." };
+                    var activityCheck = CheckActivityConditions(activityIsGoing);
+                    if (!activityCheck.Success)
+                        return activityCheck;
+
+                    var lastDonationCheck = await CheckLastDonation(donor.Id);
+                    if (!lastDonationCheck.Success)
+                        return lastDonationCheck;
+
+                    activityIsGoing.NumberIsRegistration += 1;
+                    _context.Activities.Update(activityIsGoing);
+
+                    var donation = new History
+                    {
+                        DonorId = donor.Id,
+                        Quantity = activityIsGoing.Quantity,
+                        HospitalId = activityIsGoing.HospitalId,
+                        HospitalName = "HMMMMMM",
+                        ActivityId = activityIsGoing.Id,
+                        StatusHistories = Data.Enums.StatusHistories.Waiting
+                    };
+                    _context.Histories.Add(donation);
+
+                    await AddOrUpdateSessionDonor(donor.Id, activityIsGoing.Id, _context);
+
+                    await _context.SaveChangesAsync();
+                    await transaction.CommitAsync();
+                    return new ModelResult { Success = true, Data = lastDonationCheck.Data, Message = "Register success" };
+                }
+                catch (Exception ex)
+                {
+                    await transaction.RollbackAsync();
+                    return new ModelResult { Success = false, Message = ex.ToString() };
+                }
             }
         }
 

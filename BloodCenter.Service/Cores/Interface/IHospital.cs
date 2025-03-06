@@ -12,5 +12,9 @@ namespace BloodCenter.Service.Cores.Interface
     public interface IHospital
     {
         public Task<ModelResult> AddNewActivity(ActivityDto activityDto, string id);
+        public Task<ModelResult> EditActivity(ActivityDto activityDto, string id);
+        public Task<ModelResult> CancelActivity(string token, string id);
+        public Task<ModelResult> EndActivity(string token, string id);
+        public Task<ModelResult> ComfirmDonor(string activityId, string id);
     }
 }

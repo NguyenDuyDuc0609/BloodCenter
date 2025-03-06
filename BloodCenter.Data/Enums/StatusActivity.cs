@@ -10,6 +10,7 @@ namespace BloodCenter.Data.Enums
     {
         IsWaiting,
         IsGoing,
-        Done
+        Done,
+        Cancel
     }
 }

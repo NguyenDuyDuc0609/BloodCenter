@@ -17,6 +17,7 @@ namespace BloodCenter.Controllers
         public DonorController(IDonor donor)
         {
             _donor = donor;
+            _result = new ModelResult();
         }
         [HttpGet("ActivityIsGoing")]
         [AllowAnonymous]
@@ -37,6 +38,13 @@ namespace BloodCenter.Controllers
         public async Task<IActionResult> CancelDonation([FromBody] string activityId)
         {
             _result = await _donor.CancelRegistration(Request.Headers["Authorization"], activityId);
+            return Ok(_result);
+        }
+        [HttpGet("History")]
+        [Authorize(Roles ="Donor")]
+        public async Task<IActionResult> GetHistories(int pageNumber, int pageSize)
+        {
+            _result = await _donor.GetPersonalHistory(Request.Headers["Authorization"], pageNumber, pageSize);
             return Ok(_result);
         }
     }

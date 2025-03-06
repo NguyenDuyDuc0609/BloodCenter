@@ -28,5 +28,19 @@ namespace BloodCenter.Controllers
             _result = await _hospital.AddNewActivity(activityDto, Request.Headers["Authorization"]);
             return Ok(_result);
         }
+        [HttpPost("Cancel-activity")]
+        [Authorize(Roles ="Hospital")]
+        public async Task<IActionResult> CancelActivity([FromBody] string activityId)
+        {
+            _result = await _hospital.CancelActivity(Request.Headers["Authorization"], activityId);
+            return Ok(_result);
+        }
+        [HttpPost("end-activity")]
+        [Authorize(Roles ="Hospital")]
+        public async Task<IActionResult> EndActivity([FromBody] string activityId)
+        {
+            _result = await _hospital.EndActivity(Request.Headers["Authorization"], activityId);
+            return Ok(_result);
+        }
     }
 }
