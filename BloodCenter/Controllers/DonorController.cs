@@ -20,9 +20,23 @@ namespace BloodCenter.Controllers
         }
         [HttpGet("ActivityIsGoing")]
         [AllowAnonymous]
-        public async Task<IActionResult> ActivityIsGoing()
+        public async Task<IActionResult> ActivityIsGoing(int pageNumber, int pageSize, int Status)
         {
-            _result = new ModelResult();
+            _result = await _donor.GetActivityIsGoing(pageNumber, pageSize, Status);
+            return Ok(_result);
+        }
+        [HttpPost("RegisterDonate")]
+        [Authorize(Roles ="Donor")]
+        public async Task<IActionResult> RegisterDonateBlood([FromBody] string hospitalId)
+        {
+            _result = await _donor.RegisterDonate(Request.Headers["Authorization"], hospitalId);
+            return Ok(_result);
+        }
+        [HttpPost("CancelDonation")]
+        [Authorize(Roles ="Donor")]
+        public async Task<IActionResult> CancelDonation([FromBody] string activityId)
+        {
+            _result = await _donor.CancelRegistration(Request.Headers["Authorization"], activityId);
             return Ok(_result);
         }
     }

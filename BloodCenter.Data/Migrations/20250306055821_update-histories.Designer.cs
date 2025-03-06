@@ -3,6 +3,7 @@ using System;
 using BloodCenter.Data.DataAccess;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,10 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace BloodCenter.Data.Migrations
 {
     [DbContext(typeof(BloodCenterContext))]
-    partial class BloodCenterContextModelSnapshot : ModelSnapshot
+    [Migration("20250306055821_update-histories")]
+    partial class updatehistories
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

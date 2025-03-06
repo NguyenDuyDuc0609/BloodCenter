@@ -7,6 +7,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Utils\Middleware\**" />
+    <EmbeddedResource Remove="Utils\Middleware\**" />
+    <None Remove="Utils\Middleware\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="AutoMapper.Extensions.Microsoft.DependencyInjection" Version="12.0.0" />
     <PackageReference Include="MailKit" Version="4.8.0" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="6.0.10" />
@@ -19,14 +25,11 @@
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="6.0.7" />
     <PackageReference Include="NuGet" Version="1.0.0" />
     <PackageReference Include="Quartz.Extensions.Hosting" Version="3.13.1" />
+    <PackageReference Include="Yarp.ReverseProxy" Version="2.3.0" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\BloodCenter.Data\BloodCenter.Data.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Utils\Middleware\" />
   </ItemGroup>
 
 </Project>
