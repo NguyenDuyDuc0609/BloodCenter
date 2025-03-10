@@ -16,12 +16,31 @@ using BloodCenter.Service.Utils.Backgrounds;
 using Quartz.Simpl;
 using Quartz.Spi;
 using Quartz;
+using StackExchange.Redis;
+using BloodCenter.Service.Utils.Redis.Cache;
 
 var builder = WebApplication.CreateBuilder(args);
 var jwtSettings = builder.Configuration.GetSection("Jwt");
 
+
+
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
+var redisSettings = builder.Configuration.GetSection("Redis");
+string redisHost = redisSettings["Host"];
+int redisPort = int.Parse(redisSettings["Port"]);
+
+builder.Services.AddStackExchangeRedisCache(options =>
+{
+    options.Configuration = $"{redisHost}:{redisPort}";
+    options.InstanceName = "Auth_";
+});
+
+
+//builder.Services.AddSingleton<IConnectionMultiplexer>(ConnectionMultiplexer.Connect(redisConfig));
+//builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
+//    ConnectionMultiplexer.Connect(builder.Configuration.GetConnectionString("Redis")));
+
 builder.Services.AddSwaggerGen(options =>
 {
     options.AddSecurityDefinition(JwtBearerDefaults.AuthenticationScheme, new OpenApiSecurityScheme
@@ -98,6 +117,8 @@ builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IJwt, Jwt>();
 builder.Services.AddScoped<IAdmin, AdminService>();
 builder.Services.AddScoped<IHospital, HospitalService>();
+builder.Services.AddScoped<IAuthRedisCacheService, AuthRedisCacheService>();
+
 builder.Services.AddScoped<IDonor, DonorService>();
 builder.Services.AddScoped<IQuartzWorker, QuartzWorker>();
 builder.Services.AddTransient<QuartzJob>();

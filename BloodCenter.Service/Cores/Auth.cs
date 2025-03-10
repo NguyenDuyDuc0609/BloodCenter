@@ -3,15 +3,19 @@ using BloodCenter.Data.DataAccess;
 using BloodCenter.Data.Dtos;
 using BloodCenter.Data.Dtos.AuthDto;
 using BloodCenter.Data.Entities;
+using BloodCenter.Data.Enums;
 using BloodCenter.Service.Cores.Interface;
 using BloodCenter.Service.Utils.Interface;
+using BloodCenter.Service.Utils.Redis.Cache;
 using MailKit;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
+using StackExchange.Redis;
 using System;
 using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
@@ -21,6 +25,7 @@ using System.Reflection.Metadata.Ecma335;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 namespace BloodCenter.Service.Cores
 {
@@ -34,7 +39,8 @@ namespace BloodCenter.Service.Cores
         private IEmailService _emailService;
         private IJwt _jwt;
         private readonly IConfiguration _configuration;
-        public Auth(BloodCenterContext bloodCenterContext, IMapper mapper, UserManager<Account> userManager, RoleManager<IdentityRole<Guid>> roleManager, IEmailService mailService, IJwt jwt, IConfiguration configuration)
+        private readonly IAuthRedisCacheService _cache;
+        public Auth(BloodCenterContext bloodCenterContext, IMapper mapper, UserManager<Account> userManager, RoleManager<IdentityRole<Guid>> roleManager, IEmailService mailService, IJwt jwt, IConfiguration configuration, IAuthRedisCacheService cache)
         {
             _result = new ModelResult();
             _bloodCenterContext = bloodCenterContext;
@@ -44,6 +50,7 @@ namespace BloodCenter.Service.Cores
             _emailService = mailService;
             _jwt = jwt;
             _configuration = configuration;
+            _cache = cache;
         }
 
 
@@ -111,6 +118,7 @@ namespace BloodCenter.Service.Cores
                         return _result;
                     }
                     var roles = await _userManager.GetRolesAsync(user);
+                    var role = roles.FirstOrDefault();
                     user.refreshToken = (user.refreshToken != null && user.expiresAt > DateTime.UtcNow) ? user.refreshToken : _jwt.GenerateRefreshToken();
 
                     var token = _jwt.GenerateJWT(user, roles.ToList());
@@ -125,7 +133,9 @@ namespace BloodCenter.Service.Cores
                         FullName = user.FullName,
                         Role = roleList
                     };
-
+                    string redisKey = $"user:{user.Id}:token";
+                    await _cache.SetAsync($"user:{user.Id}:token", token, TimeSpan.FromHours(1));
+                    await _cache.SetAsync($"user:{user.Id}:role", role, TimeSpan.FromHours(1));
                     _result.Success = true;
                     _result.Data = loginResponse;
                     _result.Message = "Login success";
@@ -266,6 +276,7 @@ namespace BloodCenter.Service.Cores
         
         public async Task<ModelResult> Refresh(RefreshDto refreshDto)
         {
+
             var priciple = GetClaimsPrincipalToken(refreshDto.AccessToken);
             if (priciple?.Identity?.Name is null)
             {
@@ -281,8 +292,30 @@ namespace BloodCenter.Service.Cores
                 _result.Success = false;
                 return _result;
             }
-            var roles = await _userManager.GetRolesAsync(user);
-            var newAccessToken = _jwt.GenerateJWT(user, roles.ToList());
+            string? cachedRole = await _cache.GetAsync<string>($"user:{user.Id}:role");
+
+            List<string> roles;
+
+            if (!string.IsNullOrEmpty(cachedRole))
+            {
+                roles = new List<string> { cachedRole };
+            }
+            else
+            {
+                roles = (await _userManager.GetRolesAsync(user)).ToList();
+
+                if (roles.Any())
+                {
+                    await _cache.SetAsync(
+                        $"user:{user.Id}:role",
+                        roles,
+                        TimeSpan.FromHours(1)
+                    );
+
+                }
+            }
+            var newAccessToken = _jwt.GenerateJWT(user, roles);
+
             _result.Success = true;
             _result.Data = newAccessToken;
             _result.Message = "Create new token success";
