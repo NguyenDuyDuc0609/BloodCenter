@@ -262,8 +262,8 @@ namespace BloodCenter.Service.Cores
                     _context.Histories.Add(donation);
 
                     AddOrUpdateSessionDonor(donor.Id, activityIsGoing.Id, _context);
-                    await _context.SaveChangesAsync();
                     await _publishEndpoint.Publish(new UpdateCache { message = "Update cache" });
+                    await _context.SaveChangesAsync();
                     await transaction.CommitAsync();
 
                     return new ModelResult { Success = true, Data = lastDonationCheck.Data, Message = "Register success" };

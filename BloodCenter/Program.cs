@@ -91,11 +91,11 @@ builder.Services.AddMassTransit(x =>
     x.AddConsumer<UpdateCacheConsumer>();
     x.AddEntityFrameworkOutbox<BloodCenterContext>(cfg =>
     {
-        cfg.QueryDelay = TimeSpan.FromSeconds(1);
-        cfg.DuplicateDetectionWindow = TimeSpan.FromSeconds(30);
+        cfg.QueryDelay = TimeSpan.FromSeconds(30);
+        cfg.DuplicateDetectionWindow = TimeSpan.FromMinutes(10);
+        cfg.DisableInboxCleanupService();
         cfg.UsePostgres();
         cfg.UseBusOutbox();
-        Console.WriteLine(" Outbox has been configured!");
     });
 
     x.UsingRabbitMq((context, cfg) =>
@@ -106,11 +106,11 @@ builder.Services.AddMassTransit(x =>
             h.Password("guest");
         });
 
-        cfg.ReceiveEndpoint("update-cache-queue", configurator =>
-        {
-            configurator.UseEntityFrameworkOutbox<BloodCenterContext>(context);
-            configurator.ConfigureConsumer<UpdateCacheConsumer>(context);
-        });
+        //cfg.ReceiveEndpoint("update-cache-queue", configurator =>
+        //{
+        //    configurator.UseEntityFrameworkOutbox<BloodCenterContext>(context);
+        //    configurator.ConfigureConsumer<UpdateCacheConsumer>(context);
+        //});
 
         cfg.ConfigureEndpoints(context);
     });
