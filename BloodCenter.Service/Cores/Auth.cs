@@ -3,30 +3,17 @@ using BloodCenter.Data.DataAccess;
 using BloodCenter.Data.Dtos;
 using BloodCenter.Data.Dtos.AuthDto;
 using BloodCenter.Data.Entities;
-using BloodCenter.Data.Enums;
 using BloodCenter.Service.Cores.Interface;
 using BloodCenter.Service.Utils.Interface;
 using BloodCenter.Service.Utils.Redis.Cache;
-using MailKit;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
-using StackExchange.Redis;
-using System;
-using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
-using System.Linq;
-using System.Net.WebSockets;
-using System.Reflection.Metadata.Ecma335;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
-using System.Text.Json;
-using System.Threading.Tasks;
 namespace BloodCenter.Service.Cores
 {
     public class Auth : IAuth

@@ -9,7 +9,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BloodCenter.Data", "BloodCe
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BloodCenter.Service", "BloodCenter.Service\BloodCenter.Service.csproj", "{09F0640C-8F75-4F8A-9751-C17585B2E0EB}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "YarpGateway", "YarpGateway\YarpGateway.csproj", "{1D254F32-6A2D-4F52-A177-DDCD49D1F9CD}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "YarpGateway", "YarpGateway\YarpGateway.csproj", "{1D254F32-6A2D-4F52-A177-DDCD49D1F9CD}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

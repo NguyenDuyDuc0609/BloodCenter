@@ -1,20 +1,15 @@
 ﻿using AutoMapper;
+using BloodCenter.Data.Constracts;
 using BloodCenter.Data.DataAccess;
 using BloodCenter.Data.Dtos;
 using BloodCenter.Data.Entities;
 using BloodCenter.Service.Cores.Interface;
 using BloodCenter.Service.Utils.Auth;
+using BloodCenter.Service.Utils.Redis.Cache;
+using MassTransit;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Configuration.UserSecrets;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net.WebSockets;
-using System.Text;
-using System.Threading.Tasks;
-
 namespace BloodCenter.Service.Cores
 {
     public class DonorService : IDonor
@@ -26,7 +21,12 @@ namespace BloodCenter.Service.Cores
         private readonly RoleManager<IdentityRole<Guid>> _roleManager;
         private IEmailService _emailService;
         private readonly IConfiguration _config;
-        public DonorService(BloodCenterContext context, IMapper mapper, UserManager<Account> userManager, RoleManager<IdentityRole<Guid>> roleManager, IEmailService emailService, IConfiguration config)
+        private readonly IAuthRedisCacheService _cache;
+        private readonly IPublishEndpoint _publishEndpoint;
+
+        public DonorService(BloodCenterContext context, IMapper mapper, UserManager<Account> userManager,
+            RoleManager<IdentityRole<Guid>> roleManager, IEmailService emailService, IConfiguration config,
+            IAuthRedisCacheService redis, IPublishEndpoint publishEndpoint)
         {
             _context = context;
             _mapper = mapper;
@@ -35,8 +35,11 @@ namespace BloodCenter.Service.Cores
             _emailService = emailService;
             _result = new ModelResult();
             _config = config;
+            _cache = redis;
+            _publishEndpoint = publishEndpoint;
+
         }
-        private async Task<ModelResult> ValidateAndGetActivity(string token, string activity)
+        private async Task<ModelResult> ValidateAndGetActivity(string token, string activity, BloodCenterContext bloodCenterContext)
         {
             if (string.IsNullOrEmpty(token))
                 return new ModelResult { Success = false, Message = "Please login" };
@@ -58,7 +61,7 @@ namespace BloodCenter.Service.Cores
             if (!Guid.TryParse(activity, out var activityId))
                 return new ModelResult { Success = false, Message = "Invalid activity ID format" };
 
-            var activityIsGoing = await _context.Activities
+            var activityIsGoing = await bloodCenterContext.Activities
                 .FromSqlRaw(@"SELECT * FROM ""Activities"" WHERE ""Id"" = {0} ORDER BY ""CreatedDate""", Guid.Parse(activity))
                 .FirstOrDefaultAsync();
 
@@ -93,11 +96,11 @@ namespace BloodCenter.Service.Cores
 
             return new ModelResult { Success = true, Data = lastDonation };
         }
-        private async Task AddOrUpdateSessionDonor(Guid donorId, Guid activityId, BloodCenterContext bloodCenterContext)
+        private void AddOrUpdateSessionDonor(Guid donorId, Guid activityId, BloodCenterContext bloodCenterContext)
         {
-            var sessionDonor = await _context.SessionDonors
+            var sessionDonor = bloodCenterContext.SessionDonors
                 .FromSqlRaw(@"SELECT * FROM ""SessionDonors"" WHERE ""ActivityId"" = {0} AND ""DonorId"" = {1}", activityId, donorId)
-                .FirstOrDefaultAsync();
+                .FirstOrDefault();
 
             if (sessionDonor == null)
             {
@@ -107,22 +110,21 @@ namespace BloodCenter.Service.Cores
                     ActivityId = activityId,
                     Status = Data.Enums.StatusSession.IsWaitingDonor
                 };
-                await bloodCenterContext.SessionDonors.AddAsync(sessionDonor);
-                await bloodCenterContext.SaveChangesAsync();
+                bloodCenterContext.SessionDonors.Add(sessionDonor);
             }
             else
             {
                 sessionDonor.Status = Data.Enums.StatusSession.IsWaitingDonor;
                 bloodCenterContext.SessionDonors.Update(sessionDonor);
-                await bloodCenterContext.SaveChangesAsync();
             }
         }
+
 
         public async Task<ModelResult> CancelRegistration(string token, string activity)
         {
             try
             {
-                var validation = await ValidateAndGetActivity(token, activity);
+                var validation = await ValidateAndGetActivity(token, activity, _context);
                 if (!validation.Success)
                     return validation;
 
@@ -154,6 +156,7 @@ namespace BloodCenter.Service.Cores
 
                 _context.Histories.Update(history);
                 _context.Activities.Update(activityIsGoing);
+                await _publishEndpoint.Publish(new UpdateCache { message = "Cancel register" });
                 await _context.SaveChangesAsync();
 
                 return new ModelResult { Success = true, Message = "Cancel success" };
@@ -194,11 +197,26 @@ namespace BloodCenter.Service.Cores
             try
             {
                 if(pageNumber < 1 || pageSize < 1) return new ModelResult { Success = false, Message = "Page number or page size is not valid" };
-                var listActivities = await _context.Activities
-                        .FromSqlRaw(@"SELECT * FROM ""Activities"" WHERE ""Status"" = 1 ORDER BY ""CreatedDate"" DESC OFFSET {0} LIMIT {1};",
+                List<Activity> activities = await _cache.GetPageActivitiesAsync(pageNumber, pageSize);
+                if (activities == null || activities.Count == 0)
+                {
+                    activities = await _context.Activities
+                        .FromSqlRaw(@"SELECT * FROM ""Activities"" WHERE ""Status"" = 1 
+                      ORDER BY ""CreatedDate"" DESC 
+                      OFFSET {0} LIMIT {1};",
                             (pageNumber - 1) * pageSize, pageSize)
                         .ToListAsync();
-                return new ModelResult { Success = true, Data = listActivities, Message = "Get activities success"};
+
+                    if (activities.Count > 0)
+                    {
+                        await _cache.SaveActivityListAsync(activities);
+                    }
+                    return new ModelResult { Success = false, Data = activities, Message = "Data from Database" };
+                }
+                else
+                {
+                    return new ModelResult { Success = false, Data = activities, Message = "Data from Cache" };
+                }
             }
             catch (Exception ex) {
                 return new ModelResult { Success = false, Message = ex.ToString() };
@@ -207,10 +225,11 @@ namespace BloodCenter.Service.Cores
 
         public async Task<ModelResult> RegisterDonate(string token, string activity)
         {
-            using (var transaction = await _context.Database.BeginTransactionAsync()) {
+            using (var transaction = await _context.Database.BeginTransactionAsync())
+            {
                 try
                 {
-                    var validation = await ValidateAndGetActivity(token, activity);
+                    var validation = await ValidateAndGetActivity(token, activity, _context);
                     if (!validation.Success)
                         return validation;
 
@@ -242,10 +261,11 @@ namespace BloodCenter.Service.Cores
                     };
                     _context.Histories.Add(donation);
 
-                    await AddOrUpdateSessionDonor(donor.Id, activityIsGoing.Id, _context);
-
+                    AddOrUpdateSessionDonor(donor.Id, activityIsGoing.Id, _context);
                     await _context.SaveChangesAsync();
+                    await _publishEndpoint.Publish(new UpdateCache { message = "Update cache" });
                     await transaction.CommitAsync();
+
                     return new ModelResult { Success = true, Data = lastDonationCheck.Data, Message = "Register success" };
                 }
                 catch (Exception ex)

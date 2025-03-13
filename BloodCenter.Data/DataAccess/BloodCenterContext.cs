@@ -10,6 +10,8 @@ using System.Threading.Tasks;
 using System.Reflection.Emit;
 using BloodCenter.Data.Abstractions.Interface;
 using BloodCenter.Data.Abstractions;
+using MassTransit.EntityFrameworkCoreIntegration;
+using MassTransit;
 
 namespace BloodCenter.Data.DataAccess
 {
@@ -23,6 +25,9 @@ namespace BloodCenter.Data.DataAccess
         public DbSet<RequestBlood> RequestBloods { get; set; }
         public DbSet<SessionDonor> SessionDonors { get; set; }
         public DbSet<Blood> Bloods { get; set; }
+        public DbSet<OutboxState> OutboxStates { get; set; }
+        public DbSet<OutboxMessage> OutboxMessages { get; set; }
+
         public BloodCenterContext(DbContextOptions<BloodCenterContext> options)
         : base(options)
         {
@@ -31,6 +36,10 @@ namespace BloodCenter.Data.DataAccess
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+            modelBuilder.AddInboxStateEntity();
+            modelBuilder.AddOutboxStateEntity();
+            modelBuilder.AddOutboxMessageEntity();
+
 
             modelBuilder.Entity<IdentityUserLogin<Guid>>()
                 .HasKey(l => new { l.LoginProvider, l.ProviderKey });
@@ -76,6 +85,9 @@ namespace BloodCenter.Data.DataAccess
             modelBuilder.Entity<Activity>()
                 .HasIndex(a => a.DateActivity)
                 .HasDatabaseName("IX_Activity_DateActivity");
+            modelBuilder.Entity<Account>()
+                .HasIndex(a => a.UserName)
+                .HasDatabaseName("IX_Account");
         }
         public override int SaveChanges()
         {

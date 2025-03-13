@@ -6,18 +6,9 @@ using BloodCenter.Data.Entities;
 using BloodCenter.Data.Enums;
 using BloodCenter.Service.Cores.Interface;
 using BloodCenter.Service.Utils.Auth;
-using Microsoft.AspNetCore.Http.Metadata;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Reflection.Metadata.Ecma335;
-using System.Text;
-using System.Threading.Tasks;
-using static Org.BouncyCastle.Math.EC.ECCurve;
 
 namespace BloodCenter.Service.Cores
 {

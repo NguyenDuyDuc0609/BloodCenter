@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Caching.Distributed;
+﻿using BloodCenter.Data.Entities;
+using Microsoft.Extensions.Caching.Distributed;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -20,9 +21,27 @@ namespace BloodCenter.Service.Utils.Redis.Cache
             return jsonData is null ? default : JsonSerializer.Deserialize<T>(jsonData);
         }
 
+        public async Task<List<Activity>> GetPageActivitiesAsync(int pageNumber, int pageSize)
+        {
+            var jsonData = await _cache.GetStringAsync("activities");
+            if (jsonData is null) return new List<Activity>();
+
+            var activities = JsonSerializer.Deserialize<List<Activity>>(jsonData);
+            return activities.Skip((pageNumber - 1) * pageSize).Take(pageSize).ToList();
+        }
+
         public async Task RemoveAsync(string key)
         {
             await _cache.RemoveAsync(key);
+        }
+
+        public async Task SaveActivityListAsync(List<Activity> activities)
+        {
+            var jsonData = JsonSerializer.Serialize(activities);
+            await _cache.SetStringAsync("activities", jsonData, new DistributedCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(1) 
+            });
         }
 
         public async Task SetAsync(string key, object value, TimeSpan? expiration = null)

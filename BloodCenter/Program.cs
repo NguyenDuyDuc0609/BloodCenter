@@ -16,8 +16,10 @@ using BloodCenter.Service.Utils.Backgrounds;
 using Quartz.Simpl;
 using Quartz.Spi;
 using Quartz;
-using StackExchange.Redis;
 using BloodCenter.Service.Utils.Redis.Cache;
+using MassTransit;
+using BloodCenter.Service.Utils.Consumer;
+
 
 var builder = WebApplication.CreateBuilder(args);
 var jwtSettings = builder.Configuration.GetSection("Jwt");
@@ -83,6 +85,40 @@ builder.Services.AddDbContext<BloodCenterContext>(options =>
 {
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"));
 });
+
+builder.Services.AddMassTransit(x =>
+{
+    x.AddConsumer<UpdateCacheConsumer>();
+    x.AddEntityFrameworkOutbox<BloodCenterContext>(cfg =>
+    {
+        cfg.QueryDelay = TimeSpan.FromSeconds(1);
+        cfg.DuplicateDetectionWindow = TimeSpan.FromSeconds(30);
+        cfg.UsePostgres();
+        cfg.UseBusOutbox();
+        Console.WriteLine(" Outbox has been configured!");
+    });
+
+    x.UsingRabbitMq((context, cfg) =>
+    {
+        cfg.Host("localhost", "/", h =>
+        {
+            h.Username("guest");
+            h.Password("guest");
+        });
+
+        cfg.ReceiveEndpoint("update-cache-queue", configurator =>
+        {
+            configurator.UseEntityFrameworkOutbox<BloodCenterContext>(context);
+            configurator.ConfigureConsumer<UpdateCacheConsumer>(context);
+        });
+
+        cfg.ConfigureEndpoints(context);
+    });
+});
+
+
+
+
 builder.Services.AddIdentity<Account, IdentityRole<Guid>>(options =>
 {
     options.Password.RequireDigit = true;
@@ -114,7 +150,6 @@ builder.Services.AddScoped<IJwt, Jwt>();
 builder.Services.AddScoped<IAdmin, AdminService>();
 builder.Services.AddScoped<IHospital, HospitalService>();
 builder.Services.AddScoped<IAuthRedisCacheService, AuthRedisCacheService>();
-
 builder.Services.AddScoped<IDonor, DonorService>();
 builder.Services.AddScoped<IQuartzWorker, QuartzWorker>();
 builder.Services.AddTransient<QuartzJob>();
