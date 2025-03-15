@@ -25,7 +25,7 @@ namespace BloodCenter.Service.Cores
                 mail.From.Add(MailboxAddress.Parse(_config["EmailConfig:Email"]));
                 mail.To.Add(MailboxAddress.Parse(email));
                 mail.Subject = "Click link to activate account";
-                var activationLink = $"https://localhost:7254/api/Auth/verify/{hashEmail}";
+                var activationLink = $"https://localhost:8081/api/Auth/verify/{hashEmail}";
                 mail.Body = new TextPart(TextFormat.Html)
                 {
                     Text = $"Please click the link to activate your account: <a href='{activationLink}'>Activate Account</a>"

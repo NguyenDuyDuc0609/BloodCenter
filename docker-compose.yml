@@ -1,0 +1,45 @@
+
+services:
+  bloodcenter:
+    image: ${DOCKER_REGISTRY-}bloodcenter
+    container_name: bloodcenter.api
+    build:
+      context: .
+      dockerfile: BloodCenter/Dockerfile
+    ports:
+      - "8080:8080"
+      - "8081:8081"
+    depends_on:
+      - bloodcenter.database
+      - bloodcenter.redis
+      - bloodcenter.rabbitmq
+  bloodcenter.database:
+    image: postgres:latest
+    container_name: bloodcenter.database
+    environment:
+      - POSTGRES_DB=BloodCenter
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=000000
+    volumes:
+      - ./.containers/bloodcenter-db:/var/lib/postgresql/data  
+    ports:
+      - "5432:5432"
+    restart: unless-stopped 
+
+  bloodcenter.redis:
+    image: redis:latest
+    container_name: bloodcenter.redis
+    restart: always
+    ports:
+      - "6379:6379"
+
+  bloodcenter.rabbitmq:
+    image: rabbitmq:3-management
+    container_name: bloodcenter.rabbitmq
+    restart: always
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+    ports:
+      - "5672:5672"
+      - "15672:15672" 

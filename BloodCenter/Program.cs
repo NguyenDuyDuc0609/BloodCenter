@@ -19,6 +19,7 @@ using Quartz;
 using BloodCenter.Service.Utils.Redis.Cache;
 using MassTransit;
 using BloodCenter.Service.Utils.Consumer;
+using BloodCenter.Data.ApplyMigrationDocker;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -100,18 +101,11 @@ builder.Services.AddMassTransit(x =>
 
     x.UsingRabbitMq((context, cfg) =>
     {
-        cfg.Host("localhost", "/", h =>
+        cfg.Host("bloodcenter.rabbitmq", "/", h =>
         {
             h.Username("guest");
             h.Password("guest");
         });
-
-        //cfg.ReceiveEndpoint("update-cache-queue", configurator =>
-        //{
-        //    configurator.UseEntityFrameworkOutbox<BloodCenterContext>(context);
-        //    configurator.ConfigureConsumer<UpdateCacheConsumer>(context);
-        //});
-
         cfg.ConfigureEndpoints(context);
     });
 });
@@ -161,6 +155,7 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
+    app.ApplyMigration();
 }
 
 app.UseHttpsRedirection();
