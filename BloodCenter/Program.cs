@@ -101,7 +101,8 @@ builder.Services.AddMassTransit(x =>
 
     x.UsingRabbitMq((context, cfg) =>
     {
-        cfg.Host("bloodcenter.rabbitmq", "/", h =>
+        cfg.Host("localhost", "/", h =>
+        //cfg.Host("bloodcenter.rabbitmq", "/", h =>
         {
             h.Username("guest");
             h.Password("guest");
@@ -155,7 +156,7 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
-    app.ApplyMigration();
+    //app.ApplyMigration();
 }
 
 app.UseHttpsRedirection();

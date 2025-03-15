@@ -6,9 +6,11 @@ using BloodCenter.Data.Entities;
 using BloodCenter.Data.Enums;
 using BloodCenter.Service.Cores.Interface;
 using BloodCenter.Service.Utils.Auth;
+using MassTransit.NewIdProviders;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using System.Net.WebSockets;
 
 namespace BloodCenter.Service.Cores
 {
@@ -250,6 +252,46 @@ namespace BloodCenter.Service.Cores
         public Task<ModelResult> ComfirmDonor(string activityId, string id)
         {
             throw new NotImplementedException();
+        }
+        public async Task<ModelResult> StartActivity(string token, string id)
+        {
+            try
+            {
+                var validation = await ValidateHospital(token, id);
+                if (validation.Data is not ActivityValidationResult result)
+                    return new ModelResult { Success = false, Message = "Data format is invalid" };
+                var hospital = result.Donor;
+                var activity = result.Activity;
+                if (hospital.Id != activity.HospitalId) return new ModelResult { Success = false, Message = "This is another hospital activity" };
+                if (activity.Status == StatusActivity.Cancel) return new ModelResult { Success = false, Message = "Activity cancelled" };
+                activity.Status = StatusActivity.IsGoing;
+                await _context.SaveChangesAsync();
+                return new ModelResult { Success = false, Message = "Activity start" };
+            }
+            catch(Exception ex) {
+                return new ModelResult { Success = false, Message = ex.ToString() };
+            }
+        }
+
+        public async Task<ModelResult> GetAcivity(string token, int pageNumber, int pageSize, int status)
+        {
+            try
+            {
+                if (token.StartsWith("Bearer "))
+                    token = token.Substring("Bearer ".Length).Trim();
+
+                var principal = Jwt.GetClaimsPrincipalToken(token, _config);
+                if (principal?.Identity?.Name == null)
+                    return new ModelResult { Success = false, Message = "Invalid token" };
+                var hospital = await _userManager.FindByNameAsync(principal.Identity.Name);
+                var activities = await _context.Activities.FromSqlRaw(@"Select * from ""Activities"" where ""HospitalId"" = {0} and ""Status"" = {1} order by ""CreatedDate"" offset {2} limit {3}",
+                    hospital?.Id, status, (pageNumber - 1) * pageSize, pageSize).
+                    ToListAsync();
+                return new ModelResult { Data = activities, Success = true };
+            }
+            catch (Exception ex) {
+                return new ModelResult { Success = false, Message = ex.ToString() };
+            }
         }
     }
 }

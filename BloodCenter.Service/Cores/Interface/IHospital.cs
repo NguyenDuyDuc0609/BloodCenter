@@ -15,6 +15,8 @@ namespace BloodCenter.Service.Cores.Interface
         public Task<ModelResult> EditActivity(ActivityDto activityDto, string id);
         public Task<ModelResult> CancelActivity(string token, string id);
         public Task<ModelResult> EndActivity(string token, string id);
+        public Task<ModelResult> StartActivity(string token, string id);
         public Task<ModelResult> ComfirmDonor(string activityId, string id);
+        public Task<ModelResult> GetAcivity(string token, int pageNumber, int pageSize, int status);
     }
 }

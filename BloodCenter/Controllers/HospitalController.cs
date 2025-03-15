@@ -42,5 +42,19 @@ namespace BloodCenter.Controllers
             _result = await _hospital.EndActivity(Request.Headers["Authorization"], activityId);
             return Ok(_result);
         }
+        [HttpPost("Start-activtity")]
+        [Authorize(Roles ="Hospital")]
+        public async Task<IActionResult> StartActivity([FromBody] string activityId)
+        {
+            _result = await _hospital.StartActivity(Request.Headers["Authorization"], activityId);
+            return Ok(_result);
+        }
+        [HttpGet("Hospital-activity/{pageNumer}/{pageSize}/{status}")]
+        [Authorize(Roles ="Hospital")]
+        public async Task<IActionResult> HospitalGetActivity(int pageNumer, int pageSize, int status)
+        {
+            _result = await _hospital.GetAcivity(Request.Headers["Authorization"], pageNumer, pageSize, status);
+            return Ok(_result);
+        }
     }
 }
