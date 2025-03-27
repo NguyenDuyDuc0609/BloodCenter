@@ -6,11 +6,13 @@ using BloodCenter.Data.Entities;
 using BloodCenter.Data.Enums;
 using BloodCenter.Service.Cores.Interface;
 using BloodCenter.Service.Utils.Auth;
+using MassTransit;
 using MassTransit.NewIdProviders;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using System.Net.WebSockets;
+using System.Reflection.Metadata.Ecma335;
 
 namespace BloodCenter.Service.Cores
 {
@@ -120,7 +122,7 @@ namespace BloodCenter.Service.Cores
         //        return new ModelResult { Success = false, Message = ex.ToString() };
         //    }
         //}
-        private async Task<ModelResult> ChangeStatus<T>(Guid activityId, BloodCenterContext context, StatusSession? newSessionStatus = null, StatusHistories? newHistoryStatus = null) where T : class
+        private static async Task<ModelResult> ChangeStatus<T>(Guid activityId, BloodCenterContext context, StatusSession? newSessionStatus = null, StatusHistories? newHistoryStatus = null) where T : class
         {
             try
             {
@@ -249,9 +251,60 @@ namespace BloodCenter.Service.Cores
                     return new ModelResult { Success = false, Message = ex.ToString() };
             }
         }
-        public Task<ModelResult> ComfirmDonor(string activityId, string id)
+        public async Task<ModelResult> ComfirmDonor(string token, string activityId, string id)
         {
-            throw new NotImplementedException();
+            using (var transaction = await _context.Database.BeginTransactionAsync())
+            {
+                try
+                {
+                    var validation = await ValidateHospital(token, activityId);
+                    if (validation.Data is not ActivityValidationResult result)
+                        return new ModelResult { Success = false, Message = "Data format is invalid" };
+
+                    var hospital = result.Donor;
+                    var activity = result.Activity;
+
+                    if (hospital.Id != activity.HospitalId)
+                        return new ModelResult { Success = false, Message = "This is another hospital activity" };
+
+                    if (activity.Status == StatusActivity.Cancel)
+                        return new ModelResult { Success = false, Message = "Activity cancelled" };
+
+                    var donorId = Guid.Parse(id);
+                    var actId = Guid.Parse(activityId);
+
+                    var session = await _context.SessionDonors
+                        .FirstOrDefaultAsync(x => x.DonorId == donorId
+                                                  && x.Status == StatusSession.IsWaitingDonor
+                                                  && x.ActivityId == actId);
+
+                    if (session == null)
+                        return new ModelResult { Success = false, Message = "User cancel regis" };
+
+                    var history = await _context.Histories
+                        .FirstOrDefaultAsync(x => x.ActivityId == actId
+                                                  && x.DonorId == donorId
+                                                  && x.StatusHistories == StatusHistories.Waiting);
+
+                    if (history == null)
+                        return new ModelResult { Success = false, Message = "User cancel regis" };
+
+                    session.Status = StatusSession.Done;
+                    history.StatusHistories = StatusHistories.Done;
+
+                    _context.SessionDonors.Update(session);
+                    _context.Histories.Update(history);
+                    await _context.SaveChangesAsync();
+                    await transaction.CommitAsync();
+
+                    return new ModelResult { Success = true, Message = "Donate success" };
+                }
+                catch (Exception ex)
+                {
+                    await transaction.RollbackAsync();
+                    return new ModelResult { Success = false, Message = ex.Message };
+                }
+            }
         }
         public async Task<ModelResult> StartActivity(string token, string id)
         {
@@ -291,6 +344,45 @@ namespace BloodCenter.Service.Cores
             }
             catch (Exception ex) {
                 return new ModelResult { Success = false, Message = ex.ToString() };
+            }
+        }
+
+        public async Task<ModelResult> CreateRequestBlood(RequestDto requetsDto)
+        {
+            try
+            {
+                if (requetsDto == null) return new ModelResult { Success = false, Message = "Missing parameter" };
+                var newRequestBlood = _mapper.Map<RequestBlood>(requetsDto);
+                newRequestBlood.Status = StatusRequestBlood.IsWaiting;
+                newRequestBlood.Address = requetsDto.Address;
+                await _context.RequestBloods.AddAsync(newRequestBlood);
+                return new ModelResult { Success = true, Message = "Create request success" };
+                
+            }
+            catch (Exception ex) {
+                return new ModelResult { Success = false, Message = ex.ToString() };
+            }
+        }
+
+        public async Task<ModelResult> GetDonorActivity(string token, string activityId)
+        {
+            try
+            {
+                var validation = await ValidateHospital(token, activityId);
+                if (validation.Data is not ActivityValidationResult result)
+                    return new ModelResult { Success = false, Message = "Data format is invalid" };
+
+                var hospital = result.Donor;
+                var activity = result.Activity;
+                if (hospital.Id != activity.HospitalId)
+                    return new ModelResult { Success = false, Message = "This is another hospital activity" };
+
+                if (activity.Status == StatusActivity.Cancel)
+                    return new ModelResult { Success = false, Message = "Activity cancelled" };
+                return new ModelResult { Success = true, Message = "get User activity success" };
+            }
+            catch (Exception ex) {
+                return new ModelResult { Success = false, Message = ex.Message };
             }
         }
     }

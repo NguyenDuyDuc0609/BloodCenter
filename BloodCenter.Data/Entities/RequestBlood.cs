@@ -10,18 +10,18 @@ namespace BloodCenter.Data.Entities
 {
     public class RequestBlood : EntityAuditBase<Guid>
     {
-        public Guid HospitalId { get; set; }
+            public Guid HospitalId { get; set; }
 
-        public Hospital? Hospital { get; set; }
+            public Hospital? Hospital { get; set; }
 
-        public Guid? HospitalAccept { get; set; }
+            public Guid? HospitalAccept { get; set; }
 
-        public string BloodType { get; set; }
+            public string BloodType { get; set; }
 
-        public int Quantity { get; set; }
+            public int Quantity { get; set; }
 
-        public StatusRequestBlood Status { get; set; }
+            public StatusRequestBlood Status { get; set; }
 
-        public string? Address { get; set; }
+            public string? Address { get; set; }
     }
 }
