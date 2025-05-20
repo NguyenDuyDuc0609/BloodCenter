@@ -174,7 +174,7 @@ namespace BloodCenter.Service.Cores
                     {
                         return new ModelResult { Success = false, Message = "Create user failed" };
                     }
-
+                    registerDto.Role = Data.Enums.Role.Donor;
                     bool roleExist = await _roleManager.Roles.AnyAsync(r => r.Name == registerDto.Role.ToString());
                     if (!roleExist)
                     {
