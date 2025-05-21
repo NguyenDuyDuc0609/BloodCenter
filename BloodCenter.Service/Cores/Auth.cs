@@ -11,6 +11,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
+using System.Net.WebSockets;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
@@ -53,6 +54,21 @@ namespace BloodCenter.Service.Cores
                 }
                 return builder.ToString();
             }
+        }
+        private static string GeneratePassowrd()
+        {
+            Random rand = new Random();
+            int stringlen = rand.Next(4, 10);
+            int randValue;
+            string str = "";
+            char letter;
+            for (int i = 0; i < stringlen; i++)
+            {
+                randValue = rand.Next(0, 26);
+                letter = Convert.ToChar(randValue + 65);
+                str = str + letter;
+            }
+            return str;
         }
         private ClaimsPrincipal? GetClaimsPrincipalToken(string? token)
         {
@@ -216,15 +232,6 @@ namespace BloodCenter.Service.Cores
             }
         }
 
-        public async Task<ModelResult> GetUser()
-        {
-            var user = await _userManager.FindByEmailAsync("nguyenduyduc0609genshin@gmail.com");
-            var role = await _userManager.GetRolesAsync(user);
-            _result.Success = true;
-            _result.Message = "success";
-            _result.Data = role;
-            return _result;
-        }
 
         public async Task<ModelResult> EmailConfirm(string hashedEmail)
         {
@@ -307,6 +314,46 @@ namespace BloodCenter.Service.Cores
             _result.Data = newAccessToken;
             _result.Message = "Create new token success";
             return _result;
+        }
+
+        public async Task<ModelResult> ForgotPassword(string email)
+        {
+            using (var transaction = await _bloodCenterContext.Database.BeginTransactionAsync())
+            {
+                try
+                {
+                    if (string.IsNullOrEmpty(email)) {
+                        _result.Success = false;
+                        _result.Message = "Missing email";
+                        return _result;
+                    }
+                    var user = await _bloodCenterContext.Users.FindAsync(email);
+                    if (user == null)
+                    {
+                        _result.Success = false;
+                        _result.Message = "Email not found";
+                        return _result;
+                    }
+                    user.PasswordReset = GeneratePassowrd();
+                    _result = await EmailService.SendMailResetPassword(email, user.PasswordReset, _configuration);
+                    await _bloodCenterContext.SaveChangesAsync();
+                    return _result;
+                }
+                catch (Exception ex) {
+                    await transaction.RollbackAsync();
+                    _result.Success = false;
+                    _result.Message += ex.ToString();
+                    return _result;
+                }
+            }
+        }
+
+        public async Task<ModelResult> ResetPassword(string passwordTemp, string newPassword)
+        {
+            using (var transaction = await _bloodCenterContext.Database.BeginTransactionAsync()) { 
+
+            }
+
         }
     }
 }
