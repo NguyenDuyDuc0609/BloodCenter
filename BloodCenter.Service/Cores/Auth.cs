@@ -12,9 +12,11 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Net.WebSockets;
+using System.Reflection.Metadata.Ecma335;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using Yarp.ReverseProxy.Forwarder;
 namespace BloodCenter.Service.Cores
 {
     public class Auth : IAuth
@@ -30,7 +32,6 @@ namespace BloodCenter.Service.Cores
         private readonly IAuthRedisCacheService _cache;
         public Auth(BloodCenterContext bloodCenterContext, IMapper mapper, UserManager<Account> userManager, RoleManager<IdentityRole<Guid>> roleManager, IEmailService mailService, IJwt jwt, IConfiguration configuration, IAuthRedisCacheService cache)
         {
-            _result = new ModelResult();
             _bloodCenterContext = bloodCenterContext;
             _mapper = mapper;
             _userManager = userManager;
@@ -41,7 +42,7 @@ namespace BloodCenter.Service.Cores
             _cache = cache;
         }
 
-
+        private ModelResult CreateResult(string message, bool success, object? data = default ) => new ModelResult { Success = success, Message = message, Data = data };
         private static string HashEmail(string email) {
             using (var sha256 = SHA256.Create())
             {
@@ -54,21 +55,6 @@ namespace BloodCenter.Service.Cores
                 }
                 return builder.ToString();
             }
-        }
-        private static string GeneratePassowrd()
-        {
-            Random rand = new Random();
-            int stringlen = rand.Next(4, 10);
-            int randValue;
-            string str = "";
-            char letter;
-            for (int i = 0; i < stringlen; i++)
-            {
-                randValue = rand.Next(0, 26);
-                letter = Convert.ToChar(randValue + 65);
-                str = str + letter;
-            }
-            return str;
         }
         private ClaimsPrincipal? GetClaimsPrincipalToken(string? token)
         {
@@ -90,36 +76,20 @@ namespace BloodCenter.Service.Cores
             {
                 try
                 {
-                    if (string.IsNullOrWhiteSpace(loginDto.UserName) || string.IsNullOrWhiteSpace(loginDto.Password))
-                    {
-                        _result.Success = false;
-                        _result.Message = "Missing parameter";
-                        return _result;
-                    }
+                    if (string.IsNullOrWhiteSpace(loginDto.UserName) || string.IsNullOrWhiteSpace(loginDto.Password)) return CreateResult("Missing parameter", false);
 
                     var user = await _userManager.Users
                                     .FirstOrDefaultAsync(u => u.UserName == loginDto.UserName);
-                    if (user == null)
-                    {
-                        _result.Success = false;
-                        _result.Message = "User does not exist";
-                        return _result;
-                    }
+
+                    if (user == null) return CreateResult("User does not exits", false);
 
                     var checkPassword = await _userManager.CheckPasswordAsync(user, loginDto.Password);
-                    if (!checkPassword)
-                    {
-                        _result.Success = false;
-                        _result.Message = "Incorrect password. Please try again";
-                        return _result;
-                    }
 
-                    if (user.EmailConfirmed != true)
-                    {
-                        _result.Success = false;
-                        _result.Message = "Active account in mail to login";
-                        return _result;
-                    }
+                    if (!checkPassword) return CreateResult("Incorrect password. Please try again", false);
+
+                    if (user.EmailConfirmed != true) return CreateResult("Active account in mail to login", false);
+                    if (user.StatusAccount == Data.Enums.StatusAccount.Locked) return CreateResult("Account locked, change password to login", false);
+
                     var roles = await _userManager.GetRolesAsync(user);
                     var role = roles.FirstOrDefault();
                     user.refreshToken = (user.refreshToken != null && user.expiresAt > DateTime.UtcNow) ? user.refreshToken : _jwt.GenerateRefreshToken();
@@ -139,18 +109,13 @@ namespace BloodCenter.Service.Cores
                     string redisKey = $"user:{user.Id}:token";
                     await _cache.SetAsync($"user:{user.Id}:token", token, TimeSpan.FromHours(1));
                     await _cache.SetAsync($"user:{user.Id}:role", role, TimeSpan.FromHours(1));
-                    _result.Success = true;
-                    _result.Data = loginResponse;
-                    _result.Message = "Login success";
                     await transaction.CommitAsync();
-                    return _result;
+                    return CreateResult("Login success", true, loginResponse);
                 }
                 catch (Exception ex)
                 {
                     await transaction.RollbackAsync();
-                    _result.Success = false;
-                    _result.Message = ex.Message;
-                    return _result;
+                    return CreateResult(ex.ToString(), false);
                 }
             }
         }
@@ -162,7 +127,7 @@ namespace BloodCenter.Service.Cores
                 {
                     if (registerDto == null)
                     {
-                        return new ModelResult { Success = false, Message = "Missing parameter" };
+                        return CreateResult("Missing parameter", false);
                     }
 
                     var existingUser = await _bloodCenterContext.Users
@@ -172,11 +137,7 @@ namespace BloodCenter.Service.Cores
 
                     if (existingUser != null)
                     {
-                        return new ModelResult
-                        {
-                            Success = false,
-                            Message = "The email or username has already been used by another user"
-                        };
+                        return CreateResult("The email or username has already been used by another user", false);
                     }
 
                     var hashEmail = HashEmail(registerDto.Email);
@@ -188,8 +149,9 @@ namespace BloodCenter.Service.Cores
                     var createUserResult = await _userManager.CreateAsync(newUser, registerDto.Password);
                     if (!createUserResult.Succeeded)
                     {
-                        return new ModelResult { Success = false, Message = "Create user failed" };
+                        return CreateResult("Create user failed", false);
                     }
+
                     registerDto.Role = Data.Enums.Role.Donor;
                     bool roleExist = await _roleManager.Roles.AnyAsync(r => r.Name == registerDto.Role.ToString());
                     if (!roleExist)
@@ -216,21 +178,22 @@ namespace BloodCenter.Service.Cores
                     if (!sendMail.Success)
                     {
                         await transaction.RollbackAsync();
-                        return new ModelResult { Success = false, Message = sendMail.Message };
+                        return CreateResult(sendMail.Message, false);
                     }
 
                     await _bloodCenterContext.SaveChangesAsync();
                     await transaction.CommitAsync();
 
-                    return new ModelResult { Success = true, Message = "Registration successful" };
+                    return CreateResult("Registration successful", true);
                 }
                 catch (Exception ex)
                 {
                     await transaction.RollbackAsync();
-                    return new ModelResult { Success = false, Message = ex.Message };
+                    return CreateResult(ex.Message, false);
                 }
             }
         }
+
 
 
         public async Task<ModelResult> EmailConfirm(string hashedEmail)
@@ -239,55 +202,49 @@ namespace BloodCenter.Service.Cores
             {
                 try
                 {
-                    if (hashedEmail == null)
+                    if (string.IsNullOrEmpty(hashedEmail))
                     {
-                        _result.Success = false;
-                        _result.Message = "Missing parameter";
-                        return _result;
+                        return CreateResult("Missing parameter", false);
                     }
-                    var user = await _bloodCenterContext.Users.Where(u => u.hashedEmail == hashedEmail).FirstOrDefaultAsync();
+
+                    var user = await _bloodCenterContext.Users
+                        .FirstOrDefaultAsync(u => u.hashedEmail == hashedEmail);
+
                     if (user == null)
                     {
-                        _result.Success = false;
-                        _result.Message = "Email not valid";
-                        return _result;
+                        return CreateResult("Email not valid", false);
                     }
+
                     user.EmailConfirmed = true;
                     await _bloodCenterContext.SaveChangesAsync();
                     await transaction.CommitAsync();
-                    _result.Success = true;
-                    _result.Message = "Verify success";
-                    return _result;
+
+                    return CreateResult("Verify success", true);
                 }
-                catch (Exception ex) {
+                catch (Exception ex)
+                {
                     await transaction.RollbackAsync();
-                    _result.Success = false;
-                    _result.Message = ex.Message;
-                    return _result;
+                    return CreateResult(ex.Message, false);
                 }
             }
         }
-        
+
+
         public async Task<ModelResult> Refresh(RefreshDto refreshDto)
         {
-
-            var priciple = GetClaimsPrincipalToken(refreshDto.AccessToken);
-            if (priciple?.Identity?.Name is null)
+            var principal = GetClaimsPrincipalToken(refreshDto.AccessToken);
+            if (principal?.Identity?.Name is null)
             {
-                _result.Message = "Mising access token to get pricipale";
-                _result.Success = false;
-                return _result;
+                return CreateResult("Missing access token to get principal", false);
             }
 
-            var user = await _userManager.FindByNameAsync(priciple.Identity.Name);
+            var user = await _userManager.FindByNameAsync(principal.Identity.Name);
             if (user == null || user.refreshToken != refreshDto.RefreshToken || user.expiresAt < DateTime.UtcNow)
             {
-                _result.Message = priciple.Identity.Name;
-                _result.Success = false;
-                return _result;
+                return CreateResult("Invalid refresh token or user not found", false);
             }
-            string? cachedRole = await _cache.GetAsync<string>($"user:{user.Id}:role");
 
+            string? cachedRole = await _cache.GetAsync<string>($"user:{user.Id}:role");
             List<string> roles;
 
             if (!string.IsNullOrEmpty(cachedRole))
@@ -305,55 +262,108 @@ namespace BloodCenter.Service.Cores
                         roles,
                         TimeSpan.FromHours(1)
                     );
-
                 }
             }
+
             var newAccessToken = _jwt.GenerateJWT(user, roles);
 
-            _result.Success = true;
-            _result.Data = newAccessToken;
-            _result.Message = "Create new token success";
-            return _result;
+            return CreateResult("Create new token success", true, newAccessToken);
         }
+
 
         public async Task<ModelResult> ForgotPassword(string email)
         {
-            using (var transaction = await _bloodCenterContext.Database.BeginTransactionAsync())
+            using var transaction = await _bloodCenterContext.Database.BeginTransactionAsync();
+            try
             {
-                try
+                if (string.IsNullOrEmpty(email))
+                    return CreateResult("Missing email", false);
+
+                var user = await _userManager.FindByEmailAsync(email);
+                if (user == null)
+                    return CreateResult("Email not found", false);
+
+                var resetToken = await _userManager.GeneratePasswordResetTokenAsync(user);
+
+                user.StatusAccount = Data.Enums.StatusAccount.Locked;
+
+                var sendMailResult = await EmailService.SendMailResetPassword(email, resetToken, _configuration);
+                if (!sendMailResult.Success)
                 {
-                    if (string.IsNullOrEmpty(email)) {
-                        _result.Success = false;
-                        _result.Message = "Missing email";
-                        return _result;
-                    }
-                    var user = await _bloodCenterContext.Users.FindAsync(email);
-                    if (user == null)
-                    {
-                        _result.Success = false;
-                        _result.Message = "Email not found";
-                        return _result;
-                    }
-                    user.PasswordReset = GeneratePassowrd();
-                    _result = await EmailService.SendMailResetPassword(email, user.PasswordReset, _configuration);
-                    await _bloodCenterContext.SaveChangesAsync();
-                    return _result;
-                }
-                catch (Exception ex) {
                     await transaction.RollbackAsync();
-                    _result.Success = false;
-                    _result.Message += ex.ToString();
-                    return _result;
+                    return CreateResult(sendMailResult.Message, false);
                 }
+
+                await _bloodCenterContext.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                return CreateResult("Reset password email sent successfully", true);
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                return CreateResult($"Exception: {ex.Message}", false);
             }
         }
 
-        public async Task<ModelResult> ResetPassword(string passwordTemp, string newPassword)
+        public async Task<ModelResult> ResetPassword(string username, string resetToken, string newPassword)
         {
-            using (var transaction = await _bloodCenterContext.Database.BeginTransactionAsync()) { 
+            using var transaction = await _bloodCenterContext.Database.BeginTransactionAsync();
+            try
+            {
+                if (string.IsNullOrEmpty(resetToken))
+                    return CreateResult("Missing reset token", false);
 
+                if (string.IsNullOrEmpty(newPassword))
+                    return CreateResult("Missing new password", false);
+
+                var user = await _userManager.FindByNameAsync(username);
+                if (user == null)
+                    return CreateResult("User not found", false);
+
+                var result = await _userManager.ResetPasswordAsync(user, resetToken, newPassword);
+                if (!result.Succeeded)
+                    return CreateResult("New password is not valid", false);
+
+                user.StatusAccount = Data.Enums.StatusAccount.Actived;
+
+                await _bloodCenterContext.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                return CreateResult("Reset password success", true);
             }
-
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                return CreateResult(ex.ToString(), false);
+            }
         }
+
+        public async Task<ModelResult> ChangePassword(string username, string password, string newPassword)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(username)) return CreateResult("Missing username", false);
+                if (string.IsNullOrEmpty(password)) return CreateResult("Missing current password", false);
+                if (string.IsNullOrEmpty(newPassword)) return CreateResult("Missing new password", false);
+
+                var user = await _userManager.FindByNameAsync(username);
+                if (user == null) return CreateResult("User not found", false);
+
+                var result = await _userManager.ChangePasswordAsync(user, password, newPassword);
+                if (!result.Succeeded)
+                {
+                    var errors = string.Join("; ", result.Errors.Select(e => e.Description));
+                    return CreateResult($"Password change failed: {errors}", false);
+                }
+
+                return CreateResult("Change password success", true);
+            }
+            catch (Exception ex)
+            {
+                return CreateResult($"Exception: {ex.ToString()}", false);
+            }
+        }
+
     }
 }

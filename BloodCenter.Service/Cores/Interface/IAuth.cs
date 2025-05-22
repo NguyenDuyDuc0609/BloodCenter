@@ -15,6 +15,7 @@ namespace BloodCenter.Service.Cores.Interface
         public Task<ModelResult> EmailConfirm(string hashedEmail);
         public Task<ModelResult> Refresh(RefreshDto refreshDto);
         public Task<ModelResult> ForgotPassword(string email);
-        public Task<ModelResult> ResetPassword(string passwordTemp, string newPassword);
+        public Task<ModelResult> ResetPassword(string username, string resetToken, string newPassword);
+        public Task<ModelResult> ChangePassword(string username, string password, string newPassword);
     }
 }

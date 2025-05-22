@@ -1,4 +1,5 @@
 ﻿using BloodCenter.Data.Abstractions.IEntities;
+using BloodCenter.Data.Enums;
 using Microsoft.AspNetCore.Identity;
 using System;
 using System.Collections.Generic;
@@ -16,7 +17,7 @@ namespace BloodCenter.Data.Entities
         public string? hashedEmail { get; set; }
         public string? refreshToken { get; set; }
         public string Note {  get; set; }
-        public string? PasswordReset { get; set; }
+        public StatusAccount? StatusAccount { get; set; }
         public DateTime? createAt { get; set; }
         public DateTime? expiresAt { get; set; }
         public Donor? Donor { get; set; }
