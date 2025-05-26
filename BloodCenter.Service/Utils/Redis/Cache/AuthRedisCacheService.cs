@@ -21,13 +21,15 @@ namespace BloodCenter.Service.Utils.Redis.Cache
             return jsonData is null ? default : JsonSerializer.Deserialize<T>(jsonData);
         }
 
-        public async Task<List<Activity>> GetPageActivitiesAsync(int pageNumber, int pageSize)
+        public async Task<(List<Activity> data, int totalCount)> GetPageActivitiesAsync(int pageNumber, int pageSize)
         {
             var jsonData = await _cache.GetStringAsync("activities");
-            if (jsonData is null) return new List<Activity>();
+            if (jsonData is null) return (new List<Activity>(), 0);
 
-            var activities = JsonSerializer.Deserialize<List<Activity>>(jsonData);
-            return activities.Skip((pageNumber - 1) * pageSize).Take(pageSize).ToList();
+            var activities = JsonSerializer.Deserialize<List<Activity>>(jsonData) ?? new List<Activity>();
+            var data = activities.Skip((pageNumber - 1) * pageSize).Take(pageSize).ToList();
+            int totalCount = activities.Count;
+            return (data, totalCount);
         }
 
         public async Task RemoveAsync(string key)

@@ -13,6 +13,6 @@ namespace BloodCenter.Service.Utils.Redis.Cache
         Task<T?> GetAsync<T>(string key);
         Task RemoveAsync(string key);
         Task SaveActivityListAsync(List<Activity> activities);
-        Task<List<Activity>> GetPageActivitiesAsync(int pageNumber, int pageSize);
+        Task<(List<Activity> data, int totalCount)> GetPageActivitiesAsync(int pageNumber, int pageSize);
     }
 }

@@ -23,7 +23,7 @@ namespace BloodCenter.Service.Cores
         private readonly IConfiguration _config;
         private readonly IAuthRedisCacheService _cache;
         private readonly IPublishEndpoint _publishEndpoint;
-
+        
         public DonorService(BloodCenterContext context, IMapper mapper, UserManager<Account> userManager,
             RoleManager<IdentityRole<Guid>> roleManager, IEmailService emailService, IConfiguration config,
             IAuthRedisCacheService redis, IPublishEndpoint publishEndpoint)
@@ -197,31 +197,36 @@ namespace BloodCenter.Service.Cores
             try
             {
                 if(pageNumber < 1 || pageSize < 1) return new ModelResult { Success = false, Message = "Page number or page size is not valid" };
-                List<Activity> activities = await _cache.GetPageActivitiesAsync(pageNumber, pageSize);
-                if (activities == null || activities.Count == 0)
+
+                var (activities, totalCount) = await _cache.GetPageActivitiesAsync(pageNumber, pageSize);
+
+                if (activities == null || totalCount == 0)
                 {
                     activities = await _context.Activities
-                        .FromSqlRaw(@"SELECT * FROM ""Activities"" WHERE ""Status"" = 1 
-                      ORDER BY ""CreatedDate"" DESC 
-                      OFFSET {0} LIMIT {1};",
-                            (pageNumber - 1) * pageSize, pageSize)
-                        .ToListAsync();
+                            .Where(a => a.Status == Data.Enums.StatusActivity.IsGoing)
+                            .OrderByDescending(a => a.CreatedDate)
+                            .ToListAsync();
 
                     if (activities.Count > 0)
                     {
                         await _cache.SaveActivityListAsync(activities);
                     }
-                    return new ModelResult { Success = false, Data = activities, Message = "Data from Database" };
+                    totalCount = activities.Count;
+                    var activitiesPage = activities.Skip((pageNumber - 1) * pageSize)
+                                                    .Take(pageSize)
+                                                    .ToList();
+                    return new ModelResult { Success = false, Data = activitiesPage, Message = "Data from Database", TotalCount = totalCount };
                 }
                 else
                 {
-                    return new ModelResult { Success = false, Data = activities, Message = "Data from Cache" };
+
+                    return new ModelResult { Success = false, Data = activities, Message = "Data from Cache", TotalCount = totalCount };
                 }
             }
             catch (Exception ex) {
                 return new ModelResult { Success = false, Message = ex.ToString() };
             }
-        }
+        }   
 
         public async Task<ModelResult> RegisterDonate(string token, string activity)
         {

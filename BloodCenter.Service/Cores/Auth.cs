@@ -42,7 +42,7 @@ namespace BloodCenter.Service.Cores
             _cache = cache;
         }
 
-        private ModelResult CreateResult(string message, bool success, object? data = default ) => new ModelResult { Success = success, Message = message, Data = data };
+        private ModelResult CreateResult(string message, bool success, object? data = default, int? totalCount = null ) => new ModelResult { Success = success, Message = message, Data = data, TotalCount = totalCount };
         private static string HashEmail(string email) {
             using (var sha256 = SHA256.Create())
             {
