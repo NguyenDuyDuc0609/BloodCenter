@@ -73,7 +73,7 @@ namespace BloodCenter.Service.Cores
 
         }
         private ModelResult CheckActivityConditions(Activity activityIsGoing)
-        { 
+        {
             if (activityIsGoing.Quantity == 0)
                 return new ModelResult { Success = false, Message = "Activity is not accepting registrations" };
 

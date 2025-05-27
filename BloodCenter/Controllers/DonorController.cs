@@ -1,4 +1,5 @@
 ﻿using BloodCenter.Data.Dtos;
+using BloodCenter.Data.Dtos.Donor;
 using BloodCenter.Service.Cores.Interface;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -28,16 +29,16 @@ namespace BloodCenter.Controllers
         }
         [HttpPost("RegisterDonate")]
         [Authorize(Roles ="Donor")]
-        public async Task<IActionResult> RegisterDonateBlood([FromBody] string hospitalId)
+        public async Task<IActionResult> RegisterDonateBlood([FromBody] RegisterDonateRequest hospitalId)
         {
-            _result = await _donor.RegisterDonate(Request.Headers["Authorization"], hospitalId);
+            _result = await _donor.RegisterDonate(Request.Headers["Authorization"], hospitalId.HospitalId);
             return Ok(_result);
         }
         [HttpPost("CancelDonation")]
         [Authorize(Roles ="Donor")]
-        public async Task<IActionResult> CancelDonation([FromBody] string activityId)
+        public async Task<IActionResult> CancelDonation([FromBody] RegisterDonateRequest activityId)
         {
-            _result = await _donor.CancelRegistration(Request.Headers["Authorization"], activityId);
+            _result = await _donor.CancelRegistration(Request.Headers["Authorization"], activityId.HospitalId);
             return Ok(_result);
         }
         [HttpGet("History")]
