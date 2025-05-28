@@ -2,6 +2,7 @@
 using BloodCenter.Data.Constracts;
 using BloodCenter.Data.DataAccess;
 using BloodCenter.Data.Dtos;
+using BloodCenter.Data.Dtos.Donor;
 using BloodCenter.Data.Entities;
 using BloodCenter.Service.Cores.Interface;
 using BloodCenter.Service.Utils.Auth;
@@ -184,7 +185,8 @@ namespace BloodCenter.Service.Cores
                     return new ModelResult { Success = false, Message = "User does not exist" };
                 var list = await _context.Histories.FromSqlRaw(@"Select * from ""Histories"" where ""DonorId"" = {0} order by ""CreatedDate"" DESC offset {1} limit {2}", donor.Id, (pageNumber-1)*pageSize, pageSize)
                     .ToListAsync();
-                return new ModelResult { Data = list, Success = true, Message = "Get hisroty success" };
+                var totalCount = list.Count;
+                return new ModelResult { Data = list, Success = true, Message = "Get hisroty success", TotalCount = totalCount};
             }
             catch (Exception ex) 
             {
@@ -254,14 +256,19 @@ namespace BloodCenter.Service.Cores
 
                     activityIsGoing.NumberIsRegistration += 1;
                     _context.Activities.Update(activityIsGoing);
+                    var hospital = await _context.Hospitals
+                        .Include(h => h.Account) 
+                        .Where(x => x.Id == activityIsGoing.HospitalId)
+                        .FirstAsync();
 
                     var donation = new History
                     {
                         DonorId = donor.Id,
                         Quantity = activityIsGoing.Quantity,
                         HospitalId = activityIsGoing.HospitalId,
-                        HospitalName = "HMMMMMM",
+                        HospitalName = hospital.Account.FullName,
                         ActivityId = activityIsGoing.Id,
+                        DonationDate = activityIsGoing.DateActivity,
                         StatusHistories = Data.Enums.StatusHistories.Waiting
                     };
                     _context.Histories.Add(donation);
@@ -281,5 +288,41 @@ namespace BloodCenter.Service.Cores
             }
         }
 
+        public async Task<ModelResult> DonorInformation(string token)
+        {
+            try
+            {
+                var principal = Jwt.GetClaimsPrincipalToken(token, _config);
+                if (principal?.Identity?.Name == null)
+                    return new ModelResult { Success = false, Message = "Invalid token" };
+                var user = await _context.Accounts.Include(x => x.Donor).Where(x => x.UserName == principal.Identity.Name).FirstAsync();
+                var data = new InformationDto
+                {
+                    FullName = user?.FullName,
+                    Email = user?.Email,
+                    Note = user?.Note,
+                    StatusAccount = user?.StatusAccount,
+                    PhoneNumber = user?.PhoneNumber,
+                    Username = user?.UserName,
+                };
+                return new ModelResult { Message = "Get information sucess", Data = data};
+            }
+            catch (Exception ex)
+            {
+                return new ModelResult { Message = ex.ToString(), Success = true };
+            }
+
+        }
+
+        public async Task<ModelResult> ChangeInformation(string token, InformationDto informationDto)
+        {
+            try
+            {
+
+            }
+            catch (Exception ex) {
+                return new ModelResult { Message = ex.ToString(), Success = true };
+            }
+        }
     }
 }

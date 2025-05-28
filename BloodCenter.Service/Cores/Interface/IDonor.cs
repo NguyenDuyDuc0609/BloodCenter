@@ -1,4 +1,6 @@
 ﻿using BloodCenter.Data.Dtos;
+using BloodCenter.Data.Dtos.Donor;
+using Microsoft.VisualBasic;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,6 +16,8 @@ namespace BloodCenter.Service.Cores.Interface
         public Task<ModelResult> RegisterDonate(string token, string activity);
         public Task<ModelResult> GetPersonalHistory(string token, int pageNumber, int pageSize);
         public Task<ModelResult> CancelRegistration(string token, string activity);
+        public Task<ModelResult> DonorInformation(string token);
+        public Task<ModelResult> ChangeInformation(string token, InformationDto informationDto);
     }
 
 }
