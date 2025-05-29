@@ -11,6 +11,7 @@ using MassTransit.NewIdProviders;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Org.BouncyCastle.Asn1.X509;
 using System.Net.WebSockets;
 using System.Reflection.Metadata.Ecma335;
 
@@ -379,7 +380,8 @@ namespace BloodCenter.Service.Cores
 
                 if (activity.Status == StatusActivity.Cancel)
                     return new ModelResult { Success = false, Message = "Activity cancelled" };
-                return new ModelResult { Success = true, Message = "get User activity success" };
+                var list = await _context.Activities.Include(x => x.SessionDonors).Where(x => x.Id == activity.Id).FirstOrDefaultAsync();
+                return new ModelResult { Success = true, Message = "get User activity success", Data = list };
             }
             catch (Exception ex) {
                 return new ModelResult { Success = false, Message = ex.Message };

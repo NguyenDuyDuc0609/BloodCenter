@@ -318,7 +318,16 @@ namespace BloodCenter.Service.Cores
         {
             try
             {
-
+                var principal = Jwt.GetClaimsPrincipalToken(token, _config);
+                if (principal?.Identity?.Name == null)
+                    return new ModelResult { Success = false, Message = "Invalid token" };
+                var user = await _context.Accounts.Include(x => x.Donor).Where(x => x.UserName == principal.Identity.Name).FirstAsync();
+                user.Email = informationDto.Email;
+                user.FullName = informationDto.FullName;
+                user.PhoneNumber = informationDto.PhoneNumber;
+                user.UserName = informationDto.Username;
+                await _context.SaveChangesAsync();
+                return new ModelResult { Success = false, Message = "Change information sucess" };
             }
             catch (Exception ex) {
                 return new ModelResult { Message = ex.ToString(), Success = true };

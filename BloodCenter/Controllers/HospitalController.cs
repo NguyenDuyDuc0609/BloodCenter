@@ -5,7 +5,9 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Org.BouncyCastle.Asn1.Cmp;
 using System.Diagnostics;
+using Yarp.ReverseProxy.Forwarder;
 
 namespace BloodCenter.Controllers
 {
@@ -54,6 +56,27 @@ namespace BloodCenter.Controllers
         public async Task<IActionResult> HospitalGetActivity(int pageNumer, int pageSize, int status)
         {
             _result = await _hospital.GetAcivity(Request.Headers["Authorization"], pageNumer, pageSize, status);
+            return Ok(_result);
+        }
+        [HttpPost]
+        [Authorize(Roles ="Hospital")]
+        public async Task<IActionResult> ConfirmDonor([FromBody] ConfirmDonor confirm)
+        {
+            _result = await _hospital.ComfirmDonor(Request.Headers["Authorization"], confirm.ActivityId, confirm.DonorId);
+            return Ok(_result);
+        }
+        [HttpPost("CreateRequestBlood")]
+        [Authorize(Roles ="Hospital")]
+        public async Task<IActionResult> CreateRequestBlood([FromBody] RequestDto requestDto)
+        {
+            _result = await _hospital.CreateRequestBlood(requestDto);
+            return Ok(_result);
+        }
+        [HttpPost("GetDonorActivity/{activityID}")]
+        [Authorize(Roles ="Hospital")]
+        public async Task<IActionResult> GetDonorActivity(string activityID)
+        {
+            _result = await _hospital.GetDonorActivity(Request.Headers["Authorization"], activityID);
             return Ok(_result);
         }
     }

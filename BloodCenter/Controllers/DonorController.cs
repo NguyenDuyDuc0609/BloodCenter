@@ -48,5 +48,19 @@ namespace BloodCenter.Controllers
             _result = await _donor.GetPersonalHistory(Request.Headers["Authorization"], pageNumber, pageSize);
             return Ok(_result);
         }
+        [HttpGet("Getinformation")]
+        [Authorize(Roles ="Donor")]
+        public async Task<IActionResult> GetInformation()
+        {
+            _result = await _donor.DonorInformation(Request.Headers["Authorization"]);
+            return Ok(_result);
+        }
+        [HttpGet("Changeinforamtion")]
+        [Authorize(Roles ="Donor")]
+        public async Task<IActionResult> ChangeInformation([FromBody] InformationDto information)
+        {
+            _result = await _donor.ChangeInformation(Request.Headers["Authorization"], information);
+            return Ok(_result);
+        }
     }
 }
