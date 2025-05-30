@@ -42,6 +42,10 @@ namespace BloodCenter.Service.Cores
         }
         private async Task<ModelResult> ValidateAndGetActivity(string token, string activity, BloodCenterContext bloodCenterContext)
         {
+            if (token.StartsWith("Bearer "))
+            {
+                token = token.Substring("Bearer ".Length).Trim();
+            }
             if (string.IsNullOrEmpty(token))
                 return new ModelResult { Success = false, Message = "Please login" };
 
@@ -125,6 +129,10 @@ namespace BloodCenter.Service.Cores
         {
             try
             {
+                if (token.StartsWith("Bearer "))
+                {
+                    token = token.Substring("Bearer ".Length).Trim();
+                }
                 var validation = await ValidateAndGetActivity(token, activity, _context);
                 if (!validation.Success)
                     return validation;
@@ -172,6 +180,10 @@ namespace BloodCenter.Service.Cores
         {
             try
             {
+                if (token.StartsWith("Bearer "))
+                {
+                    token = token.Substring("Bearer ".Length).Trim();
+                }
                 if (string.IsNullOrEmpty(token))
                     return new ModelResult { Success = false, Message = "Please login" };
                 if (token.StartsWith("Bearer "))
@@ -236,6 +248,10 @@ namespace BloodCenter.Service.Cores
             {
                 try
                 {
+                    if (token.StartsWith("Bearer "))
+                    {
+                        token = token.Substring("Bearer ".Length).Trim();
+                    }
                     var validation = await ValidateAndGetActivity(token, activity, _context);
                     if (!validation.Success)
                         return validation;
@@ -292,6 +308,10 @@ namespace BloodCenter.Service.Cores
         {
             try
             {
+                if (token.StartsWith("Bearer "))
+                {
+                    token = token.Substring("Bearer ".Length).Trim();
+                }
                 var principal = Jwt.GetClaimsPrincipalToken(token, _config);
                 if (principal?.Identity?.Name == null)
                     return new ModelResult { Success = false, Message = "Invalid token" };
@@ -305,7 +325,7 @@ namespace BloodCenter.Service.Cores
                     PhoneNumber = user?.PhoneNumber,
                     Username = user?.UserName,
                 };
-                return new ModelResult { Message = "Get information sucess", Data = data};
+                return new ModelResult { Message = "Get information sucess", Data = data, Success = true};
             }
             catch (Exception ex)
             {
@@ -318,6 +338,10 @@ namespace BloodCenter.Service.Cores
         {
             try
             {
+                if (token.StartsWith("Bearer "))
+                {
+                    token = token.Substring("Bearer ".Length).Trim();
+                }
                 var principal = Jwt.GetClaimsPrincipalToken(token, _config);
                 if (principal?.Identity?.Name == null)
                     return new ModelResult { Success = false, Message = "Invalid token" };
@@ -327,7 +351,8 @@ namespace BloodCenter.Service.Cores
                 user.PhoneNumber = informationDto.PhoneNumber;
                 user.UserName = informationDto.Username;
                 await _context.SaveChangesAsync();
-                return new ModelResult { Success = false, Message = "Change information sucess" };
+
+                return new ModelResult { Success = true, Message = "Change information sucess" };
             }
             catch (Exception ex) {
                 return new ModelResult { Message = ex.ToString(), Success = true };

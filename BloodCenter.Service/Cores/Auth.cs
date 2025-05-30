@@ -216,6 +216,7 @@ namespace BloodCenter.Service.Cores
                     }
 
                     user.EmailConfirmed = true;
+                    user.StatusAccount = Data.Enums.StatusAccount.Actived;
                     await _bloodCenterContext.SaveChangesAsync();
                     await transaction.CommitAsync();
 

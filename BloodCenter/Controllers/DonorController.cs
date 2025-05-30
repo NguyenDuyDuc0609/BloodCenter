@@ -55,7 +55,7 @@ namespace BloodCenter.Controllers
             _result = await _donor.DonorInformation(Request.Headers["Authorization"]);
             return Ok(_result);
         }
-        [HttpGet("Changeinforamtion")]
+        [HttpPut("Changeinforamtion")]
         [Authorize(Roles ="Donor")]
         public async Task<IActionResult> ChangeInformation([FromBody] InformationDto information)
         {
