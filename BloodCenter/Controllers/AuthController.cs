@@ -50,9 +50,9 @@ namespace BloodCenter.Controllers
         }
         [HttpPost("Forgotpassword")]
         [AllowAnonymous]
-        public async Task<IActionResult> ForgotPassword([FromBody] string email)
+        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest forgotPasswordRequest)
         {
-            _result = await _auth.ForgotPassword(email);
+            _result = await _auth.ForgotPassword(forgotPasswordRequest.Email);
             return Ok(_result);
         }
         [HttpPost("ResetPassword")]
@@ -64,9 +64,9 @@ namespace BloodCenter.Controllers
         }
         [HttpPost("ChangePassword")]
         [AllowAnonymous]
-        public async Task<IActionResult> ChangePassword([FromBody] string username, string password, string newPassword)
+        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto changePasswordDto)
         {
-            _result = await _auth.ChangePassword(username , password, newPassword);
+            _result = await _auth.ChangePassword(changePasswordDto.username, changePasswordDto.password, changePasswordDto.newPassword);
             return Ok(_result);
         }
     }
