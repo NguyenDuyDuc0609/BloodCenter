@@ -351,11 +351,18 @@ namespace BloodCenter.Service.Cores
                 user.PhoneNumber = informationDto.PhoneNumber;
                 user.UserName = informationDto.Username;
                 await _context.SaveChangesAsync();
-
-                return new ModelResult { Success = true, Message = "Change information sucess" };
+                var data = new InformationDto
+                {
+                    FullName = user.FullName,
+                    Email = user.Email,
+                    Note = user.Note,
+                    StatusAccount = user.StatusAccount,
+                    PhoneNumber = user.PhoneNumber,
+                };
+                return new ModelResult { Success = true, Message = "Change information sucess", Data = data };
             }
             catch (Exception ex) {
-                return new ModelResult { Message = ex.ToString(), Success = true };
+                return new ModelResult { Message = ex.ToString(), Success = false };
             }
         }
     }

@@ -104,7 +104,11 @@ namespace BloodCenter.Service.Cores
                         refreshToken = user.refreshToken,
                         UserName = user.UserName,
                         FullName = user.FullName,
-                        Role = roleList
+                        Role = roleList,
+                        Email = user.Email,
+                        PhoneNumber = user.PhoneNumber,
+                        Note = user.Note,
+                        StatusAccount = user.StatusAccount
                     };
                     string redisKey = $"user:{user.Id}:token";
                     await _cache.SetAsync($"user:{user.Id}:token", token, TimeSpan.FromHours(1));
