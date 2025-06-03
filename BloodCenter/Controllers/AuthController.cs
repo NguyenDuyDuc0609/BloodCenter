@@ -57,9 +57,9 @@ namespace BloodCenter.Controllers
         }
         [HttpPost("ResetPassword")]
         [AllowAnonymous]
-        public async Task<IActionResult> ResetPassword([FromBody] string username, string resetToken, string newPassword)
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPassworDto resetPassworDto)
         {
-            _result = await _auth.ResetPassword(username , resetToken, newPassword);
+            _result = await _auth.ResetPassword(resetPassworDto.Username , resetPassworDto.Password, resetPassworDto.NewPassword);
             return Ok(_result);
         }
         [HttpPost("ChangePassword")]

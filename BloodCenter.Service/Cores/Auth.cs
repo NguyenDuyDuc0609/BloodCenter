@@ -88,7 +88,7 @@ namespace BloodCenter.Service.Cores
                     if (!checkPassword) return CreateResult("Incorrect password. Please try again", false);
 
                     if (user.EmailConfirmed != true) return CreateResult("Active account in mail to login", false);
-                    if (user.StatusAccount == Data.Enums.StatusAccount.Locked) return CreateResult("Account locked, change password to login", false);
+                    if (user.StatusAccount == Data.Enums.StatusAccount.Locked) return CreateResult("Account locked, change password to login", false, user.UserName);
 
                     var roles = await _userManager.GetRolesAsync(user);
                     var role = roles.FirstOrDefault();
@@ -328,7 +328,10 @@ namespace BloodCenter.Service.Cores
 
                 var result = await _userManager.ResetPasswordAsync(user, resetToken, newPassword);
                 if (!result.Succeeded)
-                    return CreateResult("New password is not valid", false);
+                {
+                    var errors = string.Join("; ", result.Errors.Select(e => e.Description));
+                    return CreateResult($"New password is not valid: {errors}", false);
+                }
 
                 user.StatusAccount = Data.Enums.StatusAccount.Actived;
 
