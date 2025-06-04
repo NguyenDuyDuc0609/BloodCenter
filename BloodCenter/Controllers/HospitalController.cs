@@ -79,5 +79,12 @@ namespace BloodCenter.Controllers
             _result = await _hospital.GetDonorActivity(Request.Headers["Authorization"], activityID);
             return Ok(_result);
         }
+        [HttpGet("GetRequestBlood")]
+        [Authorize(Roles = "Hospital")]
+        public async Task<IActionResult> GetRequestBlood([FromBody] RequestBloodDto requestBlood)
+        {
+            _result = await _hospital.GetRequestBlood(requestBlood.PageNumber, requestBlood.PageSize, requestBlood.Status);
+            return Ok(_result);
+        }
     }
 }

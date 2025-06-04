@@ -20,5 +20,6 @@ namespace BloodCenter.Service.Cores.Interface
         public Task<ModelResult> GetAcivity(string token, int pageNumber, int pageSize, int status);
         public Task<ModelResult> CreateRequestBlood(RequestDto requetsDto);
         public Task<ModelResult> GetDonorActivity(string token, string activityId);
+        public Task<ModelResult> GetRequestBlood (int pageNumber, int pageSize, int status);
     }
 }

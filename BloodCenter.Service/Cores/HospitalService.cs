@@ -357,6 +357,7 @@ namespace BloodCenter.Service.Cores
                 newRequestBlood.Status = StatusRequestBlood.IsWaiting;
                 newRequestBlood.Address = requetsDto.Address;
                 await _context.RequestBloods.AddAsync(newRequestBlood);
+                await _context.SaveChangesAsync();
                 return new ModelResult { Success = true, Message = "Create request success" };
                 
             }
@@ -385,6 +386,28 @@ namespace BloodCenter.Service.Cores
             }
             catch (Exception ex) {
                 return new ModelResult { Success = false, Message = ex.Message };
+            }
+        }
+
+        public async Task<ModelResult> GetRequestBlood(int pageNumber, int pageSize, int status)
+        {
+            try
+            {
+                if(pageNumber <= 0 || pageSize <= 0)
+                    return new ModelResult { Success = false, Message = "Invalid page number or page size" };
+                if (status < 0 || status > 2)
+                    return new ModelResult { Success = false, Message = "Invalid status" };
+                var requests = await _context.RequestBloods.Where(x => x.Status == (StatusRequestBlood)status)
+                    .OrderByDescending(x => x.CreatedDate)
+                    .Skip((pageNumber - 1) * pageSize)
+                    .Take(pageSize)
+                    .ToListAsync();
+                var totalCount = requests.Count;
+                return new ModelResult { Data = requests, Success = true, TotalCount = totalCount, Message = "Get request blood success" };
+            }
+            catch (Exception ex)
+            {
+                return new ModelResult { Success = false, Message = ex.ToString() };
             }
         }
     }
