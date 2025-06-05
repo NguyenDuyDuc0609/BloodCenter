@@ -108,7 +108,8 @@ namespace BloodCenter.Service.Cores
                         Email = user.Email,
                         PhoneNumber = user.PhoneNumber,
                         Note = user.Note,
-                        StatusAccount = user.StatusAccount
+                        StatusAccount = user.StatusAccount,
+                        Id = user.Id
                     };
                     string redisKey = $"user:{user.Id}:token";
                     await _cache.SetAsync($"user:{user.Id}:token", token, TimeSpan.FromHours(1));

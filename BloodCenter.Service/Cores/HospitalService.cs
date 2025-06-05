@@ -410,5 +410,35 @@ namespace BloodCenter.Service.Cores
                 return new ModelResult { Success = false, Message = ex.ToString() };
             }
         }
+
+        public async Task<ModelResult> AcceptRequestBlood(string token, string requestId)
+        {
+            try
+            {
+                if (token.StartsWith("Bearer "))
+                    token = token.Substring("Bearer ".Length).Trim();
+                var principal = Jwt.GetClaimsPrincipalToken(token, _config);
+                if (principal?.Identity?.Name == null)
+                    return new ModelResult { Success = false, Message = "Invalid token" };
+                var hospital = await _userManager.FindByNameAsync(principal.Identity.Name);
+                if(hospital == null)
+                    return new ModelResult { Success = false, Message = "Hospital not found" };
+                if (Guid.TryParse(requestId, out Guid parsedRequestId) && hospital.Id == parsedRequestId)
+                {
+                    return new ModelResult { Success = false, Message = "You cannot accept your own request" };
+                }
+                var request = await _context.RequestBloods
+                    .FirstOrDefaultAsync(x => x.Id == Guid.Parse(requestId) && x.Status == StatusRequestBlood.IsWaiting);
+                if (request == null) return new ModelResult { Success = false, Message = "Request not found or already processed" };
+                request.Status = StatusRequestBlood.IsAccept;
+                request.HospitalAccept = hospital.Id;
+                await _context.SaveChangesAsync();
+                return new ModelResult { Success = true, Message = "Request accepted successfully" };
+            }
+            catch(Exception ex)
+            {
+                return new ModelResult { Success = false, Message = ex.ToString() };
+            }
+        }
     }
 }

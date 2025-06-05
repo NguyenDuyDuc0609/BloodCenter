@@ -18,5 +18,6 @@ namespace BloodCenter.Data.Dtos.AuthDto
         public string? Note { get; set; }
         public StatusAccount? StatusAccount { get; set; }
         public List<string> Role { get; set; }
+        public Guid? Id { get; set; }
     }
 }
