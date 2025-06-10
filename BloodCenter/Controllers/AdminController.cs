@@ -27,5 +27,12 @@ namespace BloodCenter.Controllers
             _result = await _admin.AddNewHospital(registerDto);
             return Ok(_result);
         }
+        [HttpPost]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> DeleteHospital([FromBody] string hospitalId)
+        {
+            _result = await _admin.DeleteHospital(hospitalId);
+            return Ok(_result);
+        }
     }
 }
